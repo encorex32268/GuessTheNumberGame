@@ -1,4 +1,4 @@
-package com.lihan.guessthenumbergame.ui
+package com.lihan.guessthenumbergame.fragments
 
 import androidx.fragment.app.Fragment
 import com.lihan.guessthenumbergame.R

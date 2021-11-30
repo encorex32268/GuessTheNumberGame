@@ -4,8 +4,10 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.33605072463768115" />
+        <entry key="app/src/main/res/layout/fragment_home.xml" value="0.33605072463768115" />
         <entry key="app/src/main/res/layout/fragment_m.xml" value="0.33605072463768115" />
         <entry key="app/src/main/res/layout/fragment_member.xml" value="0.33605072463768115" />
+        <entry key="app/src/main/res/layout/home_gameroom_item.xml" value="0.31927083333333334" />
         <entry key="app/src/main/res/menu/bottom_menu.xml" value="0.37604166666666666" />
       </map>
     </option>
