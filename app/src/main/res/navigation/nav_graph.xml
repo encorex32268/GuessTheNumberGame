@@ -9,10 +9,23 @@
         android:id="@+id/homeFragment"
         android:name="com.lihan.guessthenumbergame.fragments.HomeFragment"
         android:label="fragment_home"
-        tools:layout="@layout/fragment_home" />
+        tools:layout="@layout/fragment_home" >
+        <action
+            android:id="@+id/action_homeFragment_to_gameFragment"
+            app:destination="@id/gameFragment" />
+    </fragment>
     <fragment
         android:id="@+id/memberFragment"
         android:name="com.lihan.guessthenumbergame.fragments.MemberFragment"
         android:label="fragment_member"
         tools:layout="@layout/fragment_member" />
+    <fragment
+        android:id="@+id/gameFragment"
+        android:name="com.lihan.guessthenumbergame.fragments.GameFragment"
+        android:label="fragment_game"
+        tools:layout="@layout/fragment_game" >
+        <argument
+            android:name="gameRoom"
+            app:argType="com.lihan.guessthenumbergame.model.GameRoom" />
+    </fragment>
 </navigation>

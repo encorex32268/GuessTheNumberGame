@@ -1,6 +1,7 @@
 package com.lihan.guessthenumbergame.other
 
 import android.content.Context
+import com.lihan.guessthenumbergame.repositories.GameRepository
 import com.lihan.guessthenumbergame.repositories.HomeRepository
 import dagger.Module
 import dagger.Provides
@@ -17,6 +18,11 @@ object AppModule {
     @Singleton
     @Provides
     fun providerHomeRepository(@ApplicationContext context : Context) = HomeRepository(context)
+
+
+    @Singleton
+    @Provides
+    fun providerGameRepository(@ApplicationContext context : Context) = GameRepository(context)
 
 
 }

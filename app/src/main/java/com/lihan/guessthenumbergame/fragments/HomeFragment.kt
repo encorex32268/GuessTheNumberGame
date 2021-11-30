@@ -1,30 +1,33 @@
 package com.lihan.guessthenumbergame.fragments
 
+import android.app.AlertDialog
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
 import com.lihan.guessthenumbergame.R
+import com.lihan.guessthenumbergame.databinding.CreateroomAlertviewBinding
 import com.lihan.guessthenumbergame.databinding.FragmentHomeBinding
 import com.lihan.guessthenumbergame.model.GameRoom
+import com.lihan.guessthenumbergame.other.RoomClickListener
 import com.lihan.guessthenumbergame.ui.HomeAdapter
 import com.lihan.guessthenumbergame.viewmodel.HomeViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import timber.log.Timber
+import java.lang.NumberFormatException
 import java.util.*
+import kotlin.collections.HashSet
 
 @AndroidEntryPoint
-class HomeFragment : Fragment(R.layout.fragment_home) {
+class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
 
     private lateinit var binding : FragmentHomeBinding
+    private lateinit var alertCustomBinding : CreateroomAlertviewBinding
+
     private lateinit var homeAdapter : HomeAdapter
     private val viewModel : HomeViewModel by viewModels()
     override fun onCreateView(
@@ -33,7 +36,8 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         savedInstanceState: Bundle?
     ): View {
         setHasOptionsMenu(true)
-        binding = FragmentHomeBinding.inflate(inflater,container,false)
+        alertCustomBinding = CreateroomAlertviewBinding.inflate(layoutInflater)
+        binding = FragmentHomeBinding.inflate(layoutInflater)
         return binding.root
     }
 
@@ -45,24 +49,39 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
     private fun setUpGameRoomRecyclerView() {
         binding.apply {
             homeGameRoomRecyclerView.apply {
-                homeAdapter = HomeAdapter(mutableListOf())
+                homeAdapter = HomeAdapter(mutableListOf()).also {
+                    it.roomClickListener = this@HomeFragment
+                }
                 setHasFixedSize(true)
                 layoutManager = LinearLayoutManager(requireContext())
                 adapter = homeAdapter
             }
             homeCreateGameRoomBtn.setOnClickListener {
-                //Firebase insert
-//                dumpData()
+                AlertDialog.Builder(requireContext())
+                    .setView(alertCustomBinding.root)
+                    .setTitle("Create Room")
+                    .setPositiveButton("ok") { _, _ ->
+                        val numberString  = alertCustomBinding.creatorAnswerEditTextView.editableText.toString()
+                        if (checkInputNumber(numberString)){
+                            val creatorNumber  = numberString.toInt()
+                            val gameRoom = createGameRoom(creatorNumber)
+                            val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
+                            findNavController().navigate(action)
+                        }
 
 
 
-
+                    }
+                    .setNegativeButton("cancel"){ _ , _ -> }
+                    .show()
             }
             viewModel.getGameRooms().observe(viewLifecycleOwner,{
                 it?.let {
                     if (it.size != 0){
                         homeGameRoomRecyclerView.apply {
-                            homeAdapter = HomeAdapter(it)
+                            homeAdapter = HomeAdapter(it).also {
+                                it.roomClickListener = this@HomeFragment
+                            }
                             adapter = homeAdapter
                         }
                     }
@@ -73,15 +92,63 @@ class HomeFragment : Fragment(R.layout.fragment_home) {
         }
     }
 
-    private fun dumpData() {
+    private fun createGameRoom(creatorNumber: Int): GameRoom {
         val firebase = FirebaseDatabase.getInstance()
         val myRef = firebase.getReference("GameRooms").push()
         val timeString = Date().time.toString()
         val formatedKey = timeString.substring(timeString.length - 4).toInt()
         val gameRoom = GameRoom(
-            formatedKey, "me", "you", 5000, "1234", "5678"
+            myRef.key!!,formatedKey, "me", "", 5000, creatorNumber, 0
         )
         myRef.setValue(gameRoom)
+        return gameRoom
+
+    }
+
+    override fun roomClick(gameRoom: GameRoom) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Join Room")
+            .setView(alertCustomBinding.root)
+            .setPositiveButton("Ok") { _, _, ->
+                val numberString  = alertCustomBinding.creatorAnswerEditTextView.editableText.toString()
+
+                if (checkInputNumber(numberString)){
+                    val creatorNumber = numberString.toInt()
+                    gameRoom.apply {
+                        joinerAnswer = creatorNumber
+                        joiner = "Joiner"
+                    }
+                    updateGameRoom(gameRoom)
+                    val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
+                    findNavController().navigate(action)
+                }
+            }
+            .setNegativeButton("Cancel") { _, _, -> }.show()
+
+
+
+    }
+
+    private fun updateGameRoom(gameRoom: GameRoom) {
+        val firebase = FirebaseDatabase.getInstance()
+        val myRef = firebase.getReference("GameRooms").child(gameRoom.roomFullId)
+        myRef.setValue(gameRoom)
+    }
+
+    private fun checkInputNumber(numberString : String) : Boolean{
+        var number: Int
+        try {
+            number = numberString.toInt()
+        }catch (e : NumberFormatException){
+            return false
+        }
+        if (number.toString().length<4) return false
+        val hashSet = HashSet<String>()
+        number.toString().toCharArray().forEach {
+            hashSet.add(it.toString())
+        }
+        if (hashSet.size<4)return false
+        return true
     }
 
 }
