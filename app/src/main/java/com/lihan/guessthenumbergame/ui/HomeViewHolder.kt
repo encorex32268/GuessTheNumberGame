@@ -11,7 +11,7 @@ class HomeViewHolder(itemView : View) : RecyclerView.ViewHolder(itemView)
 
     fun bindTo(gameRoom: GameRoom){
         binding.apply {
-            gameRoomNameTextView.text = gameRoom.creator
+            gameRoomNameTextView.text = gameRoom.id.toString()
         }
     }
 }

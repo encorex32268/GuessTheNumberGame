@@ -1,7 +1,5 @@
 package com.lihan.guessthenumbergame.model
 
-import java.util.*
-
 data class GameRoom(
     var id  : Int ,
     var creator : String ,
@@ -11,4 +9,9 @@ data class GameRoom(
     var joinerAnswer : String
 ){
     constructor():this(0,"","",5000,"","")
+
+    override fun toString(): String {
+        return "GameRoom(id=$id, creator='$creator', joiner='$joiner', waitTime=$waitTime, creatorAnswer='$creatorAnswer', joinerAnswer='$joinerAnswer')"
+    }
+
 }
