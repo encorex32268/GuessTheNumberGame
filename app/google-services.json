@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "71086738333",
+    "project_id": "guessthenumbergame-5619c",
+    "storage_bucket": "guessthenumbergame-5619c.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:71086738333:android:c40f8e878782c8f2d47d74",
+        "android_client_info": {
+          "package_name": "com.lihan.guessthenumbergame"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "71086738333-jm5ja2umh85qap5n3qulens1f1u7v160.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAyIuDhiA5uZwDN_jgm9M7gNZiHknzf950"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "71086738333-jm5ja2umh85qap5n3qulens1f1u7v160.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
