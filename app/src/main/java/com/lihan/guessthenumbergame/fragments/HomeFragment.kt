@@ -2,6 +2,7 @@ package com.lihan.guessthenumbergame.fragments
 
 import android.app.AlertDialog
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,6 +33,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
 
     private lateinit var homeAdapter : HomeAdapter
     private val viewModel : HomeViewModel by viewModels()
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -117,7 +119,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
         AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.ALERT_JOINROOM))
             .setView(alertCustomBinding.root)
-            .setPositiveButton(getString(R.string.ALERT_OK)) { _, _, ->
+            .setPositiveButton(getString(R.string.ALERT_OK)) { _, _ ->
                 val numberString  = alertCustomBinding.creatorAnswerEditTextView.editableText.toString()
 
                 if (checkInputNumber(numberString)){
@@ -131,7 +133,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
                     findNavController().navigate(action)
                 }
             }
-            .setNegativeButton(getString(R.string.ALERT_CANCEL)) { _, _, -> }.show()
+            .setNegativeButton(getString(R.string.ALERT_CANCEL)) { _, _ -> }.show()
 
 
 

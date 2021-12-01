@@ -1,15 +1,19 @@
 package com.lihan.guessthenumbergame
 
 import java.lang.NumberFormatException
+import android.os.CountDownTimer
+
+
+
 
 fun main() {
-    println("${checkInputNumber(1234)}")
-    println("${checkInputNumber(1224)}")
-    println("${checkInputNumber(234)}")
-    println("${checkInputNumber(0)}")
+
+
 
 
 }
+
+
 private fun checkInputNumber(number : Int) : Boolean{
     if (number.toString().length<4) return false
     val hashSet = HashSet<String>()

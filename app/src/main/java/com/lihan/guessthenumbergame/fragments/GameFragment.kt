@@ -38,7 +38,7 @@ class GameFragment : Fragment(R.layout.fragment_game) {
         object Joiner : Player()
     }
     private lateinit var player: Player
-    private var othersideAnswer = 0
+    private var otherSideAnswer = 0
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -72,6 +72,7 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             Status.RoomCreated.name ->{}
                             Status.CreatorTurn.name ->{
                                 getGameRoomFromFireBase()
+                                roomStatusTextView.text = "Your Turn"
                             }
                             Status.JoinerTurn.name ->{
 
@@ -83,9 +84,6 @@ class GameFragment : Fragment(R.layout.fragment_game) {
 
                             }
                             Status.EndGame.name ->{
-
-                            }
-                            Status.StartGame.name->{
 
                             }
 
@@ -93,12 +91,8 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                     }
                     is Player.Joiner->{
                         when(it.status){
-                            Status.RoomCreated.name -> {
-
-                            }
-                            Status.CreatorTurn.name ->{
-
-                            }
+                            Status.RoomCreated.name -> { }
+                            Status.CreatorTurn.name ->{ getGameRoomFromFireBase() }
                             Status.JoinerTurn.name ->{
 
                             }
@@ -109,9 +103,6 @@ class GameFragment : Fragment(R.layout.fragment_game) {
 
                             }
                             Status.EndGame.name ->{
-
-                            }
-                            Status.StartGame.name->{
 
                             }
                         }
@@ -135,6 +126,14 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                 val gameRoom  = snapshot.getValue(GameRoom::class.java)
                 gameRoom?.let {
                     mGameRoom = it
+                    otherSideAnswer = when(player){
+                        is Player.Creator->{
+                            it.joinerAnswer
+                        }
+                        is Player.Joiner->{
+                            it.creatorAnswer
+                        }
+                    }
                 }
 
             }
