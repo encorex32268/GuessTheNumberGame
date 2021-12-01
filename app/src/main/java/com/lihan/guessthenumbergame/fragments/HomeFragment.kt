@@ -106,7 +106,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
         myRef.setValue(gameRoom)
 
         val statusRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(myRef.key!!)
-        val roomStatus = RoomStatus(roomFullid, Status.RoomCreated)
+        val roomStatus = RoomStatus(roomFullid, Status.RoomCreated.name,0,0)
         statusRef.setValue(roomStatus)
 
         return gameRoom
@@ -142,7 +142,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
         val myRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMS_PATH)).child(gameRoom.roomFullId)
         myRef.setValue(gameRoom)
         val statusRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(gameRoom.roomFullId)
-        val roomStatus = RoomStatus(gameRoom.roomFullId, Status.RoomCreated)
+        val roomStatus = RoomStatus(gameRoom.roomFullId, Status.CreatorTurn.name,0,0)
         statusRef.setValue(roomStatus)
     }
 

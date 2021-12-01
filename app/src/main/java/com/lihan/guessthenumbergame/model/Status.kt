@@ -1,11 +1,11 @@
 package com.lihan.guessthenumbergame.model
 
-sealed class Status{
-    object RoomCreated : Status()
-    object StartGame : Status()
-    object CreatorTurn : Status()
-    object JoinerTurn : Status()
-    object CreatorWin :Status()
-    object JoinerWin : Status()
-    object EndGame : Status()
+sealed class Status(var name : String){
+    object RoomCreated : Status("RoomCreated")
+    object StartGame : Status("StartGame")
+    object CreatorTurn : Status("CreatorTurn")
+    object JoinerTurn : Status("JoinerTurn")
+    object CreatorWin :Status("CreatorWin")
+    object JoinerWin : Status("JoinerWin")
+    object EndGame : Status("EndGame")
 }
