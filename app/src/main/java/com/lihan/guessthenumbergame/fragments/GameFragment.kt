@@ -27,7 +27,6 @@ class GameFragment : Fragment(R.layout.fragment_game) {
     private val viewModel : GameViewModel by viewModels()
 
     private lateinit var gameRoom : GameRoom
-    private var isCreator = false
 
     sealed class Player{
         object Creator : Player()
@@ -77,28 +76,6 @@ class GameFragment : Fragment(R.layout.fragment_game) {
 
 
             })
-
-
-//            flipViewBindingFront.answerTextView.text = gameRoom.creator.
-//            if (gameRoom.creator.isEmpty() || gameRoom.creator.isBlank()){
-//                //joiner
-//                roomStatus = RoomStatus.Joiner
-//            }else{
-//                //creator
-//                roomStatus = RoomStatus.Creator
-//            }
-//
-//
-//            when(roomStatus){
-//               is RoomStatus.Creator ->{
-//                   roomStatusTextView.text =
-//               }
-//               is RoomStatus.Joiner -> {
-//
-//               }
-//
-//            }
-
 
         }
     }

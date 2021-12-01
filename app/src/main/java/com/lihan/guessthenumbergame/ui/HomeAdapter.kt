@@ -19,9 +19,7 @@ class HomeAdapter(var gameRooms: MutableList<GameRoom>) : RecyclerView.Adapter<H
         val gameRoom = gameRooms[position]
         holder.bindTo(gameRoom)
         holder.itemView.setOnClickListener {
-            roomClickListener?.let {
-                it.roomClick(gameRoom)
-            }
+            roomClickListener.roomClick(gameRoom)
         }
     }
 

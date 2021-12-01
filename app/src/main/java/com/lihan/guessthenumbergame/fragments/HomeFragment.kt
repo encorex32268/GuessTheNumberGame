@@ -14,6 +14,8 @@ import com.lihan.guessthenumbergame.R
 import com.lihan.guessthenumbergame.databinding.CreateroomAlertviewBinding
 import com.lihan.guessthenumbergame.databinding.FragmentHomeBinding
 import com.lihan.guessthenumbergame.model.GameRoom
+import com.lihan.guessthenumbergame.model.RoomStatus
+import com.lihan.guessthenumbergame.model.Status
 import com.lihan.guessthenumbergame.other.RoomClickListener
 import com.lihan.guessthenumbergame.ui.HomeAdapter
 import com.lihan.guessthenumbergame.viewmodel.HomeViewModel
@@ -59,8 +61,8 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
             homeCreateGameRoomBtn.setOnClickListener {
                 AlertDialog.Builder(requireContext())
                     .setView(alertCustomBinding.root)
-                    .setTitle("Create Room")
-                    .setPositiveButton("ok") { _, _ ->
+                    .setTitle(getString(R.string.ALERT_CRAETEROOM))
+                    .setPositiveButton(getString(R.string.ALERT_OK)) { _, _ ->
                         val numberString  = alertCustomBinding.creatorAnswerEditTextView.editableText.toString()
                         if (checkInputNumber(numberString)){
                             val creatorNumber  = numberString.toInt()
@@ -72,7 +74,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
 
 
                     }
-                    .setNegativeButton("cancel"){ _ , _ -> }
+                    .setNegativeButton(getString(R.string.ALERT_CANCEL)){ _ , _ -> }
                     .show()
             }
             viewModel.getGameRooms().observe(viewLifecycleOwner,{
@@ -94,22 +96,28 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
 
     private fun createGameRoom(creatorNumber: Int): GameRoom {
         val firebase = FirebaseDatabase.getInstance()
-        val myRef = firebase.getReference("GameRooms").push()
+        val myRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMS_PATH)).push()
         val timeString = Date().time.toString()
         val formatedKey = timeString.substring(timeString.length - 4).toInt()
+        val roomFullid = myRef.key!!
         val gameRoom = GameRoom(
-            myRef.key!!,formatedKey, "me", "", 5000, creatorNumber, 0
+            roomFullid,formatedKey, "me", "", 5000, creatorNumber, 0
         )
         myRef.setValue(gameRoom)
+
+        val statusRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(myRef.key!!)
+        val roomStatus = RoomStatus(roomFullid, Status.RoomCreated)
+        statusRef.setValue(roomStatus)
+
         return gameRoom
 
     }
 
     override fun roomClick(gameRoom: GameRoom) {
         AlertDialog.Builder(requireContext())
-            .setTitle("Join Room")
+            .setTitle(getString(R.string.ALERT_JOINROOM))
             .setView(alertCustomBinding.root)
-            .setPositiveButton("Ok") { _, _, ->
+            .setPositiveButton(getString(R.string.ALERT_OK)) { _, _, ->
                 val numberString  = alertCustomBinding.creatorAnswerEditTextView.editableText.toString()
 
                 if (checkInputNumber(numberString)){
@@ -123,7 +131,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
                     findNavController().navigate(action)
                 }
             }
-            .setNegativeButton("Cancel") { _, _, -> }.show()
+            .setNegativeButton(getString(R.string.ALERT_CANCEL)) { _, _, -> }.show()
 
 
 
@@ -131,8 +139,11 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
 
     private fun updateGameRoom(gameRoom: GameRoom) {
         val firebase = FirebaseDatabase.getInstance()
-        val myRef = firebase.getReference("GameRooms").child(gameRoom.roomFullId)
+        val myRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMS_PATH)).child(gameRoom.roomFullId)
         myRef.setValue(gameRoom)
+        val statusRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(gameRoom.roomFullId)
+        val roomStatus = RoomStatus(gameRoom.roomFullId, Status.RoomCreated)
+        statusRef.setValue(roomStatus)
     }
 
     private fun checkInputNumber(numberString : String) : Boolean{
