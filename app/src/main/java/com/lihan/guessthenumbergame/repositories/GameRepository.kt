@@ -13,23 +13,13 @@ class GameRepository(
     val context : Context
 ) {
 
-//    private val mGameRoom = MutableLiveData<GameRoom>()
     private val mRoomStatus = MutableLiveData<RoomStatus>()
+    private val mResults = MutableLiveData<ArrayList<String>>()
+    fun getResults() : MutableLiveData<ArrayList<String>>{
 
-//    fun getGameRoom(roomFullId : String): MutableLiveData<GameRoom> {
-//        val firebase  = FirebaseDatabase.getInstance()
-//        val myRef = firebase.getReference("GameRooms").child(roomFullId)
-//        myRef.addValueEventListener(object : ValueEventListener{
-//            override fun onDataChange(snapshot: DataSnapshot) {
-//                val gameRoom  = snapshot.getValue(GameRoom::class.java)
-//                gameRoom?.let {
-//                    mGameRoom.postValue(it)
-//                }
-//            }
-//            override fun onCancelled(error: DatabaseError) {} })
-//
-//        return mGameRoom
-//    }
+        return mResults
+    }
+
 
 
     fun getRoomStatus(roomFullId : String) : MutableLiveData<RoomStatus>{
@@ -47,5 +37,6 @@ class GameRepository(
 
         return mRoomStatus
     }
+
 
 }

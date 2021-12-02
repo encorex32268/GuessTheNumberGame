@@ -10,7 +10,6 @@ class GameViewModel @Inject constructor(
     val gameRepository: GameRepository
 ) : ViewModel(){
 
-//    fun getGameRoom(roomFullid: String) = gameRepository.getGameRoom(roomFullid)
-
+    fun getResults() = gameRepository.getResults()
     fun getRoomStatus(roomFullid: String) = gameRepository.getRoomStatus(roomFullid)
 }

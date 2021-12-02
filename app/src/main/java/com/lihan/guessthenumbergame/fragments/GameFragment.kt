@@ -5,8 +5,11 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -18,8 +21,10 @@ import com.lihan.guessthenumbergame.databinding.NumberCardItemBackBinding
 import com.lihan.guessthenumbergame.databinding.NumberCardItemFrontBinding
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.Status
+import com.lihan.guessthenumbergame.other.FireBaseRepository
 import com.lihan.guessthenumbergame.viewmodel.GameViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class GameFragment : Fragment(R.layout.fragment_game) {
@@ -39,6 +44,9 @@ class GameFragment : Fragment(R.layout.fragment_game) {
     }
     private lateinit var player: Player
     private var otherSideAnswer = 0
+
+    @Inject
+    lateinit var fireBaseRepository: FireBaseRepository
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -65,11 +73,20 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                 mGameRoom = this
             }
 
+            resultRecyclerView.apply {
+                setHasFixedSize(true)
+                layoutManager = LinearLayoutManager(requireContext())
+//                adapter
+            }
+
+
             viewModel.getRoomStatus(mGameRoom.roomFullId).observe(viewLifecycleOwner,{
                 when(player){
                     is Player.Creator->{
                         when(it.status){
-                            Status.RoomCreated.name ->{}
+                            Status.RoomCreated.name ->{
+                                roomIDtextView.text = mGameRoom.roomFullId
+                            }
                             Status.CreatorTurn.name ->{
                                 getGameRoomFromFireBase()
                                 roomStatusTextView.text = "Your Turn"
@@ -92,9 +109,12 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                     is Player.Joiner->{
                         when(it.status){
                             Status.RoomCreated.name -> { }
-                            Status.CreatorTurn.name ->{ getGameRoomFromFireBase() }
+                            Status.CreatorTurn.name ->{
+                                roomIDtextView.text = mGameRoom.roomFullId
+                                getGameRoomFromFireBase()
+                            }
                             Status.JoinerTurn.name ->{
-
+                                //guess
                             }
                             Status.CreatorWin.name ->{
 
@@ -119,9 +139,8 @@ class GameFragment : Fragment(R.layout.fragment_game) {
 
 
     private fun getGameRoomFromFireBase(){
-        val firebase  = FirebaseDatabase.getInstance()
-        val myRef = firebase.getReference("GameRooms").child(mGameRoom.roomFullId)
-        myRef.addValueEventListener(object : ValueEventListener {
+        fireBaseRepository.getGameRoomsChildRef(mGameRoom.roomFullId)
+            .addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot){
                 val gameRoom  = snapshot.getValue(GameRoom::class.java)
                 gameRoom?.let {

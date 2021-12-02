@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.lihan.guessthenumbergame.R
 import com.lihan.guessthenumbergame.databinding.CreateroomAlertviewBinding
@@ -17,12 +18,15 @@ import com.lihan.guessthenumbergame.databinding.FragmentHomeBinding
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
 import com.lihan.guessthenumbergame.model.Status
+import com.lihan.guessthenumbergame.other.FireBaseRepository
+import com.lihan.guessthenumbergame.other.InputNumberCheckerUtils
 import com.lihan.guessthenumbergame.other.RoomClickListener
 import com.lihan.guessthenumbergame.ui.HomeAdapter
 import com.lihan.guessthenumbergame.viewmodel.HomeViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.lang.NumberFormatException
 import java.util.*
+import javax.inject.Inject
 import kotlin.collections.HashSet
 
 @AndroidEntryPoint
@@ -33,6 +37,9 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
 
     private lateinit var homeAdapter : HomeAdapter
     private val viewModel : HomeViewModel by viewModels()
+
+    @Inject
+    lateinit var fireBaseRepository: FireBaseRepository
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -66,15 +73,12 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
                     .setTitle(getString(R.string.ALERT_CRAETEROOM))
                     .setPositiveButton(getString(R.string.ALERT_OK)) { _, _ ->
                         val numberString  = alertCustomBinding.creatorAnswerEditTextView.editableText.toString()
-                        if (checkInputNumber(numberString)){
+                        if (InputNumberCheckerUtils.checkInputNumber(numberString)){
                             val creatorNumber  = numberString.toInt()
                             val gameRoom = createGameRoom(creatorNumber)
                             val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
                             findNavController().navigate(action)
                         }
-
-
-
                     }
                     .setNegativeButton(getString(R.string.ALERT_CANCEL)){ _ , _ -> }
                     .show()
@@ -97,8 +101,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
     }
 
     private fun createGameRoom(creatorNumber: Int): GameRoom {
-        val firebase = FirebaseDatabase.getInstance()
-        val myRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMS_PATH)).push()
+        val myRef = fireBaseRepository.getGameRoomsRef().push()
         val timeString = Date().time.toString()
         val formatedKey = timeString.substring(timeString.length - 4).toInt()
         val roomFullid = myRef.key!!
@@ -107,9 +110,8 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
         )
         myRef.setValue(gameRoom)
 
-        val statusRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(myRef.key!!)
         val roomStatus = RoomStatus(roomFullid, Status.RoomCreated.name,0,0)
-        statusRef.setValue(roomStatus)
+        fireBaseRepository.getGameRoomsStatusChildRef(roomFullid).setValue(roomStatus)
 
         return gameRoom
 
@@ -121,8 +123,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
             .setView(alertCustomBinding.root)
             .setPositiveButton(getString(R.string.ALERT_OK)) { _, _ ->
                 val numberString  = alertCustomBinding.creatorAnswerEditTextView.editableText.toString()
-
-                if (checkInputNumber(numberString)){
+                if (InputNumberCheckerUtils.checkInputNumber(numberString)){
                     val creatorNumber = numberString.toInt()
                     gameRoom.apply {
                         joinerAnswer = creatorNumber
@@ -140,28 +141,11 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
     }
 
     private fun updateGameRoom(gameRoom: GameRoom) {
-        val firebase = FirebaseDatabase.getInstance()
-        val myRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMS_PATH)).child(gameRoom.roomFullId)
-        myRef.setValue(gameRoom)
-        val statusRef = firebase.getReference(getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(gameRoom.roomFullId)
+        fireBaseRepository.getGameRoomsChildRef(gameRoom.roomFullId).setValue(gameRoom)
         val roomStatus = RoomStatus(gameRoom.roomFullId, Status.CreatorTurn.name,0,0)
-        statusRef.setValue(roomStatus)
+        fireBaseRepository.getGameRoomsStatusChildRef(gameRoom.roomFullId).setValue(roomStatus)
     }
 
-    private fun checkInputNumber(numberString : String) : Boolean{
-        var number: Int
-        try {
-            number = numberString.toInt()
-        }catch (e : NumberFormatException){
-            return false
-        }
-        if (number.toString().length<4) return false
-        val hashSet = HashSet<String>()
-        number.toString().toCharArray().forEach {
-            hashSet.add(it.toString())
-        }
-        if (hashSet.size<4)return false
-        return true
-    }
+
 
 }

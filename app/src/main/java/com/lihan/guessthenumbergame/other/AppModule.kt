@@ -1,6 +1,8 @@
 package com.lihan.guessthenumbergame.other
 
 import android.content.Context
+import com.google.firebase.database.FirebaseDatabase
+import com.lihan.guessthenumbergame.R
 import com.lihan.guessthenumbergame.repositories.GameRepository
 import com.lihan.guessthenumbergame.repositories.HomeRepository
 import dagger.Module
@@ -24,5 +26,9 @@ object AppModule {
     @Provides
     fun providerGameRepository(@ApplicationContext context : Context) = GameRepository(context)
 
+
+    @Singleton
+    @Provides
+    fun providerFirebaseRepository(@ApplicationContext context : Context) = FireBaseRepository(context)
 
 }
