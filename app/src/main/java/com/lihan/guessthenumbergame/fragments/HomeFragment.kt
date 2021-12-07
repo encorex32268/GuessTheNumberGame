@@ -142,7 +142,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
 
     private fun updateGameRoom(gameRoom: GameRoom) {
         fireBaseRepository.getGameRoomsChildRef(gameRoom.roomFullId).setValue(gameRoom)
-        val roomStatus = RoomStatus(gameRoom.roomFullId, Status.CreatorTurn.name,0,0)
+        val roomStatus = RoomStatus(gameRoom.roomFullId, Status.StartGame.name,0,0)
         fireBaseRepository.getGameRoomsStatusChildRef(gameRoom.roomFullId).setValue(roomStatus)
     }
 
