@@ -5,6 +5,8 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ScrollView
+import android.widget.TextView
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.navArgs
 import com.google.firebase.database.DataSnapshot
@@ -12,37 +14,32 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
 import com.lihan.guessthenumbergame.Constants
 import com.lihan.guessthenumbergame.R
-import com.lihan.guessthenumbergame.databinding.ChoicenumberViewBinding
 import com.lihan.guessthenumbergame.databinding.FragmentGameBinding
 import com.lihan.guessthenumbergame.databinding.NumberCardItemBackBinding
 import com.lihan.guessthenumbergame.databinding.NumberCardItemFrontBinding
+import com.lihan.guessthenumbergame.log
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.Status
-import com.lihan.guessthenumbergame.other.FireBaseRepository
+import com.lihan.guessthenumbergame.repositories.FireBaseRepository
 import com.lihan.guessthenumbergame.viewmodel.GameViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import java.lang.NumberFormatException
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class GameFragment : Fragment(R.layout.fragment_game) {
 
     private lateinit var binding : FragmentGameBinding
-    private lateinit var flipViewBindingFront : NumberCardItemFrontBinding
-    private lateinit var flipViewBindingBack : NumberCardItemBackBinding
-    private lateinit var choicenumberViewBinding: ChoicenumberViewBinding
-
     private val args : GameFragmentArgs by navArgs()
     private val viewModel : GameViewModel by viewModels()
-
     private lateinit var mGameRoom : GameRoom
 
-    sealed class Player{
-        object Creator : Player()
-        object Joiner : Player()
+    sealed class Player(var answerPlayer : Int){
+        data class Creator(var answer:Int) : Player(answer)
+        data class Joiner(var answer:Int) : Player(answer)
     }
     private lateinit var player: Player
     private var otherSideAnswer = 0
-
     @Inject
     lateinit var fireBaseRepository: FireBaseRepository
 
@@ -51,9 +48,6 @@ class GameFragment : Fragment(R.layout.fragment_game) {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        flipViewBindingFront = NumberCardItemFrontBinding.inflate(layoutInflater)
-        flipViewBindingBack  = NumberCardItemBackBinding.inflate(layoutInflater)
-        choicenumberViewBinding = ChoicenumberViewBinding.inflate(layoutInflater)
         binding = FragmentGameBinding.inflate(layoutInflater)
         return binding.root
     }
@@ -62,12 +56,12 @@ class GameFragment : Fragment(R.layout.fragment_game) {
         super.onViewCreated(view, savedInstanceState)
         binding.apply {
             args.gameRoom.apply {
-                player = if (checkIsCreator(joiner)){
+                if (checkIsCreator(this.joiner)){
                     roomStatusTextView.text = Constants.CREATE_WAITING_FOR_JOINER
-                    Player.Creator
+                    player = Player.Creator(this.creatorAnswer)
                 }else{
                     roomStatusTextView.text = Constants.JOINER_CREATOR_TURN
-                    Player.Joiner
+                    player = Player.Joiner(this.joinerAnswer)
                 }
                 mGameRoom = this
             }
@@ -75,7 +69,7 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                 when(player){
                     is Player.Creator->{
                         when(it.status){
-                            Status.RoomCreated.name ->{ roomIDtextView.text = mGameRoom.roomFullId }
+                            Status.RoomCreated.name ->{ roomIDtextView.text = mGameRoom.id.toString() }
                             Status.StartGame.name ->{
                                 getGameRoomFromFireBase()
                                 roomStatusTextView.text = "START"
@@ -93,7 +87,7 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                         when(it.status){
                             Status.RoomCreated.name -> { }
                             Status.StartGame.name ->{
-                                roomIDtextView.text = mGameRoom.roomFullId
+                                roomIDtextView.text = mGameRoom.id.toString()
                                 roomStatusTextView.text = "START"
                                 getGameRoomFromFireBase()
 
@@ -108,59 +102,70 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                     }
                 }
             })
+            includechoicenumberview.apply {
+                val numbersTextViewID = arrayListOf(
+                number1TextView, number2TextView, number3TextView, number4TextView)
 
-        }
-
-        choicenumberViewBinding.apply {
-            val numbersTextViewID = arrayListOf(
-                number1TextView,number2TextView,number3TextView,number4TextView
-            )
-            numbersTextViewID.forEach {  textView ->
-                textView.setOnClickListener {
-                    textView.text = ""
-                }
-            }
-            guessNumberSendButton2.setOnClickListener {
-                val numbers = arrayListOf<Int>()
-                numbersTextViewID.forEach {
-                    if (it.text.isNullOrBlank() && it.text.isNullOrEmpty()){
-                        numbers.add((it.text).toString().toInt())
-                    }
-                }
-                if(numbers.size != 4){
-                    return@setOnClickListener
-                }else{
-                    //send
-                    toCompare(numbers)
-                }
-            }
-            val choiceNumbersTextViewID = arrayListOf(
-                choiceNum1TextView,choiceNum2TextView,choiceNum3TextView,choiceNum4TextView,choiceNum5TextView,
-                choiceNum6TextView, choiceNum7TextView,choiceNum8TextView,choiceNum9TextView,choiceNum10TextView
-            )
-            choiceNumbersTextViewID.forEach { textView ->
-                textView.setOnClickListener {
-                    var isSet = false
+                guessNumberSendButton2.setOnClickListener {
+                    val numbers = arrayListOf<Int>()
                     numbersTextViewID.forEach {
-                        if (!isSet && it.text.isEmpty()){
-                            isSet = !isSet
-                            it.text = textView.text.toString()
+                        it.text.toString().apply{
+                            try {
+                                numbers.add(this.toInt())
+                            }catch (e : NumberFormatException){
+                                return@setOnClickListener
+                            }
+
+                        }
+                    }
+                    if(numbers.size != 4){
+                        return@setOnClickListener
+                    }else{
+                        toCompare(numbers)
+                        gameScrollView.fullScroll(ScrollView.FOCUS_DOWN)
+                    }
+                    cleanNumbersTextView(numbersTextViewID)
+                }
+                val choiceNumbersTextViewID = arrayListOf(
+                    choiceNum1TextView,choiceNum2TextView,choiceNum3TextView,choiceNum4TextView,choiceNum5TextView,
+                    choiceNum6TextView, choiceNum7TextView,choiceNum8TextView,choiceNum9TextView,choiceNum10TextView
+                )
+                choiceNumbersTextViewID.forEach { textView ->
+                    textView.setOnClickListener {
+                        var isSet = false
+                        numbersTextViewID.forEach {
+                            if (!isSet && it.text.isEmpty()){
+                                isSet = !isSet
+                                it.text = textView.text.toString()
+                            }
                         }
                     }
                 }
+
             }
-
-
+            numbercarditemfront.answerTextView.text = player.answerPlayer.toString()
         }
 
+    }
 
 
+    private fun cleanNumbersTextView(textViews : ArrayList<TextView>){
+        textViews.forEach { textView ->
+            textView.setOnClickListener {
+                textView.text = ""
+            }
+            textView.text = ""
+        }
     }
 
     private fun toCompare(numbers: ArrayList<Int>) {
         val otherAnswers = otherSideAnswer.toString().toCharArray()
         var resultA = 0
         var resultB = 0
+        var numbersString = ""
+        numbers.forEach {
+            numbersString+=it.toString()
+        }
         for (index in otherAnswers.indices) {
             val number1 = otherAnswers[index].toString().toInt()
             for (index2 in numbers.indices){
@@ -175,6 +180,8 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                 }
             }
         }
+        val resultMessage = "$numbersString -> ${resultA}A${resultB}B"
+        binding.gameOutput.append("${resultMessage}\n")
     }
 
     private fun uploadResult() {
@@ -195,9 +202,11 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                     mGameRoom = it
                     otherSideAnswer = when(player){
                         is Player.Creator->{
+                            log("Creator ${mGameRoom.toString()}")
                             it.joinerAnswer
                         }
                         is Player.Joiner->{
+                            log("Joiner ${mGameRoom.toString()}")
                             it.creatorAnswer
                         }
                     }
@@ -207,5 +216,6 @@ class GameFragment : Fragment(R.layout.fragment_game) {
             override fun onCancelled(error: DatabaseError) {} }
         )
     }
+
 
 }

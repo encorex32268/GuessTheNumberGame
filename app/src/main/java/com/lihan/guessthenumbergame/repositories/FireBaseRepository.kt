@@ -1,4 +1,4 @@
-package com.lihan.guessthenumbergame.other
+package com.lihan.guessthenumbergame.repositories
 
 import android.content.Context
 import com.google.firebase.database.DatabaseReference

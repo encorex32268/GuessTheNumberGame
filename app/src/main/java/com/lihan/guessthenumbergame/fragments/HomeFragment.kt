@@ -2,42 +2,37 @@ package com.lihan.guessthenumbergame.fragments
 
 import android.app.AlertDialog
 import android.os.Bundle
-import android.os.CountDownTimer
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
 import com.lihan.guessthenumbergame.R
+import com.lihan.guessthenumbergame.databinding.ChoicenumberViewBinding
 import com.lihan.guessthenumbergame.databinding.CreateroomAlertviewBinding
 import com.lihan.guessthenumbergame.databinding.FragmentHomeBinding
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
 import com.lihan.guessthenumbergame.model.Status
-import com.lihan.guessthenumbergame.other.FireBaseRepository
+import com.lihan.guessthenumbergame.repositories.FireBaseRepository
 import com.lihan.guessthenumbergame.other.InputNumberCheckerUtils
 import com.lihan.guessthenumbergame.other.RoomClickListener
 import com.lihan.guessthenumbergame.ui.HomeAdapter
 import com.lihan.guessthenumbergame.viewmodel.HomeViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import java.lang.NumberFormatException
 import java.util.*
 import javax.inject.Inject
-import kotlin.collections.HashSet
 
 @AndroidEntryPoint
 class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
 
     private lateinit var binding : FragmentHomeBinding
     private lateinit var alertCustomBinding : CreateroomAlertviewBinding
-
     private lateinit var homeAdapter : HomeAdapter
     private val viewModel : HomeViewModel by viewModels()
-
     @Inject
     lateinit var fireBaseRepository: FireBaseRepository
 
@@ -47,13 +42,13 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
         savedInstanceState: Bundle?
     ): View {
         setHasOptionsMenu(true)
-        alertCustomBinding = CreateroomAlertviewBinding.inflate(layoutInflater)
         binding = FragmentHomeBinding.inflate(layoutInflater)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        initAlertBinding()
         setUpGameRoomRecyclerView()
     }
 
@@ -72,13 +67,20 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
                     .setView(alertCustomBinding.root)
                     .setTitle(getString(R.string.ALERT_CRAETEROOM))
                     .setPositiveButton(getString(R.string.ALERT_OK)) { _, _ ->
-                        val numberString  = alertCustomBinding.creatorAnswerEditTextView.editableText.toString()
-                        if (InputNumberCheckerUtils.checkInputNumber(numberString)){
+                        var numberString = ""
+                        alertCustomBinding.apply {
+                            val numberTextViews = arrayListOf(
+                                alertNumber1TextView,alertNumber2TextView,alertNumber3TextView,alertNumber4TextView
+                            )
+                            numberTextViews.forEach {
+                                numberString+=it.text.toString()
+                            }
+                        }
+
                             val creatorNumber  = numberString.toInt()
                             val gameRoom = createGameRoom(creatorNumber)
                             val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
                             findNavController().navigate(action)
-                        }
                     }
                     .setNegativeButton(getString(R.string.ALERT_CANCEL)){ _ , _ -> }
                     .show()
@@ -97,6 +99,36 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
 
             })
 
+        }
+    }
+
+    private fun initAlertBinding(){
+        val createroomView = LayoutInflater.from(requireContext()).inflate(R.layout.createroom_alertview,binding.root,false)
+        alertCustomBinding = CreateroomAlertviewBinding.bind(createroomView)
+        alertCustomBinding.apply {
+            val numberTextViews = arrayListOf(
+                alertNumber1TextView,alertNumber2TextView,alertNumber3TextView,alertNumber4TextView
+            )
+            numberTextViews.forEach { textView ->
+                textView.setOnClickListener {
+                    textView.text = ""
+                }
+            }
+            val choiceNumbersTextViewID = arrayListOf(
+                alertchoiceNum1TextView,alertchoiceNum2TextView,alertchoiceNum3TextView,alertchoiceNum4TextView,alertchoiceNum5TextView,
+                alertchoiceNum6TextView,alertchoiceNum7TextView,alertchoiceNum8TextView,alertchoiceNum9TextView,alertchoiceNum10TextView
+            )
+            choiceNumbersTextViewID.forEach { textView ->
+                textView.setOnClickListener {
+                    var isSet = false
+                    numberTextViews.forEach {
+                        if (!isSet && it.text.isEmpty()){
+                            isSet = !isSet
+                            it.text = textView.text.toString()
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -122,9 +154,16 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
             .setTitle(getString(R.string.ALERT_JOINROOM))
             .setView(alertCustomBinding.root)
             .setPositiveButton(getString(R.string.ALERT_OK)) { _, _ ->
-                val numberString  = alertCustomBinding.creatorAnswerEditTextView.editableText.toString()
-                if (InputNumberCheckerUtils.checkInputNumber(numberString)){
-                    val creatorNumber = numberString.toInt()
+                var numberString = ""
+                alertCustomBinding.apply {
+                    val numberTextViews = arrayListOf(
+                        alertNumber1TextView,alertNumber2TextView,alertNumber3TextView,alertNumber4TextView
+                    )
+                    numberTextViews.forEach {
+                        numberString+=it.text
+                    }
+                }
+                val creatorNumber  = numberString.toInt()
                     gameRoom.apply {
                         joinerAnswer = creatorNumber
                         joiner = "Joiner"
@@ -132,7 +171,6 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
                     updateGameRoom(gameRoom)
                     val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
                     findNavController().navigate(action)
-                }
             }
             .setNegativeButton(getString(R.string.ALERT_CANCEL)) { _, _ -> }.show()
 

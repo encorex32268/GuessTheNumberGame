@@ -1,8 +1,7 @@
 package com.lihan.guessthenumbergame.other
 
 import android.content.Context
-import com.google.firebase.database.FirebaseDatabase
-import com.lihan.guessthenumbergame.R
+import com.lihan.guessthenumbergame.repositories.FireBaseRepository
 import com.lihan.guessthenumbergame.repositories.GameRepository
 import com.lihan.guessthenumbergame.repositories.HomeRepository
 import dagger.Module

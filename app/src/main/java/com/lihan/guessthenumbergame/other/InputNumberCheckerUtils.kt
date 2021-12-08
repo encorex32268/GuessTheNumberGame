@@ -6,7 +6,7 @@ class InputNumberCheckerUtils {
 
     companion object{
         fun checkInputNumber(numberString : String) : Boolean{
-            var number: Int
+            val number: Int
             try {
                 number = numberString.toInt()
             }catch (e : NumberFormatException){

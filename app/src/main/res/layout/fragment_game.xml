@@ -21,7 +21,7 @@
     <com.wajahatkarim3.easyflipview.EasyFlipView
         android:id="@+id/easyFlipView"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="70dp"
         android:layout_marginTop="8dp"
         app:flipDuration="400"
         app:flipEnabled="true"
@@ -30,9 +30,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/roomStatusTextView">
 
-        <include layout="@layout/number_card_item_back"></include>
+        <include
+            android:id="@+id/numbercarditemback"
+            layout="@layout/number_card_item_back"></include>
 
-        <include layout="@layout/number_card_item_front"></include>
+        <include
+            android:id="@+id/numbercarditemfront"
+            layout="@layout/number_card_item_front"></include>
 
     </com.wajahatkarim3.easyflipview.EasyFlipView>
 
@@ -40,12 +44,12 @@
         android:id="@+id/roomIDtextView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
         android:gravity="start|center_vertical"
         android:text="TextView"
-        android:textAlignment="gravity"
-        android:textColor="#000000"
+        android:textAlignment="viewStart"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:textColor="@color/black"
+        android:textSize="14sp"
         app:layout_constraintBottom_toTopOf="@+id/easyFlipView"
         app:layout_constraintEnd_toStartOf="@+id/guideline5"
         app:layout_constraintStart_toStartOf="parent"
@@ -66,7 +70,7 @@
         app:layout_constraintGuide_percent="0.7" />
 
     <include
-        android:id="@+id/include"
+        android:id="@+id/includechoicenumberview"
         layout="@layout/choicenumber_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
@@ -77,11 +81,13 @@
 
     <ScrollView
         android:id="@+id/gameScrollView"
-        android:layout_width="409dp"
-        android:layout_height="448dp"
-        android:layout_marginTop="1dp"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
         android:layout_marginBottom="1dp"
-        app:layout_constraintBottom_toTopOf="@+id/include"
+        app:layout_constraintBottom_toTopOf="@+id/includechoicenumberview"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/easyFlipView">
@@ -89,13 +95,12 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" >
+            android:orientation="vertical">
 
             <TextView
                 android:id="@+id/gameOutput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="TextView"
                 android:textAppearance="@style/TextAppearance.AppCompat.Large"
                 android:textSize="18sp" />
         </LinearLayout>
