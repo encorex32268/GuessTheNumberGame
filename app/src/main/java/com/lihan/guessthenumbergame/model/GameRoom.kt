@@ -9,21 +9,21 @@ data class GameRoom(
     var creator: String,
     var joiner: String,
     var waitTime: Int,
-    var creatorAnswer: Int,
-    var joinerAnswer: Int
+    var creatorAnswer: String,
+    var joinerAnswer: String
 ) : Parcelable {
     constructor(parcel: Parcel) : this(
-        parcel.readString()!!,
+        parcel.readString()?:"",
         parcel.readInt(),
         parcel.readString()!!,
         parcel.readString()!!,
         parcel.readInt(),
-        parcel.readInt(),
-        parcel.readInt()
+        parcel.readString()?:"",
+        parcel.readString()?:""
     ) {
     }
 
-    constructor():this("",0,"","",5000,1234,5678)
+    constructor():this("",0,"","",5000,"1234","5678")
 
     override fun toString(): String {
         return "GameRoom(roomFullID = ${roomFullId } id=$id, creator='$creator', joiner='$joiner', waitTime=$waitTime, creatorAnswer='$creatorAnswer', joinerAnswer='$joinerAnswer')"
@@ -35,8 +35,8 @@ data class GameRoom(
         parcel.writeString(creator)
         parcel.writeString(joiner)
         parcel.writeInt(waitTime)
-        parcel.writeInt(creatorAnswer)
-        parcel.writeInt(joinerAnswer)
+        parcel.writeString(creatorAnswer)
+        parcel.writeString(joinerAnswer)
     }
 
     override fun describeContents(): Int {

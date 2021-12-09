@@ -5,13 +5,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.lihan.guessthenumbergame.R
-import com.lihan.guessthenumbergame.databinding.ChoicenumberViewBinding
 import com.lihan.guessthenumbergame.databinding.CreateroomAlertviewBinding
 import com.lihan.guessthenumbergame.databinding.FragmentHomeBinding
 import com.lihan.guessthenumbergame.model.GameRoom
@@ -77,8 +75,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
                             }
                         }
 
-                            val creatorNumber  = numberString.toInt()
-                            val gameRoom = createGameRoom(creatorNumber)
+                            val gameRoom = createGameRoom(numberString)
                             val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
                             findNavController().navigate(action)
                     }
@@ -132,13 +129,13 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
         }
     }
 
-    private fun createGameRoom(creatorNumber: Int): GameRoom {
+    private fun createGameRoom(creatorNumberString: String): GameRoom {
         val myRef = fireBaseRepository.getGameRoomsRef().push()
         val timeString = Date().time.toString()
         val formatedKey = timeString.substring(timeString.length - 4).toInt()
         val roomFullid = myRef.key!!
         val gameRoom = GameRoom(
-            roomFullid,formatedKey, "me", "", 5000, creatorNumber, 0
+            roomFullid,formatedKey, "me", "", 5000, creatorNumberString, ""
         )
         myRef.setValue(gameRoom)
 
@@ -163,14 +160,16 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
                         numberString+=it.text
                     }
                 }
-                val creatorNumber  = numberString.toInt()
+                if (!InputNumberCheckerUtils.isCurrentNumber(numberString)) return@setPositiveButton else{
                     gameRoom.apply {
-                        joinerAnswer = creatorNumber
+                        joinerAnswer = numberString
                         joiner = "Joiner"
                     }
                     updateGameRoom(gameRoom)
                     val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
                     findNavController().navigate(action)
+                }
+
             }
             .setNegativeButton(getString(R.string.ALERT_CANCEL)) { _, _ -> }.show()
 
