@@ -12,12 +12,10 @@ import androidx.navigation.fragment.navArgs
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
-import com.lihan.guessthenumbergame.Constants
-import com.lihan.guessthenumbergame.R
+import com.lihan.guessthenumbergame.*
 import com.lihan.guessthenumbergame.databinding.FragmentGameBinding
 import com.lihan.guessthenumbergame.databinding.NumberCardItemBackBinding
 import com.lihan.guessthenumbergame.databinding.NumberCardItemFrontBinding
-import com.lihan.guessthenumbergame.log
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
 import com.lihan.guessthenumbergame.model.Status
@@ -111,13 +109,8 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                 }
             })
             includechoicenumberview.apply {
-                val numbersTextViewID = arrayListOf(
-                number1TextView, number2TextView, number3TextView, number4TextView)
-                numbersTextViewID.forEach { textView ->
-                    textView.setOnClickListener {
-                        textView.text = ""
-                    }
-                }
+                bindingViewInit()
+                val numbersTextViewID = getNumbersTextViewID()
                 guessNumberSendButton2.setOnClickListener {
                     val numbers = arrayListOf<Int>()
                     numbersTextViewID.forEach {
@@ -127,7 +120,6 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             }catch (e : NumberFormatException){
                                 return@setOnClickListener
                             }
-
                         }
                     }
                     if(numbers.size != 4){
@@ -138,22 +130,6 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                     }
                     cleanNumbersTextView(numbersTextViewID)
                 }
-                val choiceNumbersTextViewID = arrayListOf(
-                    choiceNum1TextView,choiceNum2TextView,choiceNum3TextView,choiceNum4TextView,choiceNum5TextView,
-                    choiceNum6TextView, choiceNum7TextView,choiceNum8TextView,choiceNum9TextView,choiceNum10TextView
-                )
-                choiceNumbersTextViewID.forEach { textView ->
-                    textView.setOnClickListener {
-                        var isSet = false
-                        numbersTextViewID.forEach {
-                            if (!isSet && it.text.isEmpty()){
-                                isSet = !isSet
-                                it.text = textView.text.toString()
-                            }
-                        }
-                    }
-                }
-
             }
             numbercarditemfront.answerTextView.text = player.answerPlayer
             binding.easyFlipView.flipTheView()

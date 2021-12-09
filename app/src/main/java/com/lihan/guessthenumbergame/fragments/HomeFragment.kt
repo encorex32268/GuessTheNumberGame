@@ -1,6 +1,5 @@
 package com.lihan.guessthenumbergame.fragments
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -10,14 +9,15 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.lihan.guessthenumbergame.R
-import com.lihan.guessthenumbergame.databinding.CreateroomAlertviewBinding
 import com.lihan.guessthenumbergame.databinding.FragmentHomeBinding
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
 import com.lihan.guessthenumbergame.model.Status
+import com.lihan.guessthenumbergame.other.CreateRoomAlertListener
 import com.lihan.guessthenumbergame.repositories.FireBaseRepository
-import com.lihan.guessthenumbergame.other.InputNumberCheckerUtils
+import com.lihan.guessthenumbergame.repositories.InputNumberCheckerUtils
 import com.lihan.guessthenumbergame.other.RoomClickListener
+import com.lihan.guessthenumbergame.repositories.AlertRoomFactory
 import com.lihan.guessthenumbergame.ui.HomeAdapter
 import com.lihan.guessthenumbergame.viewmodel.HomeViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -25,15 +25,14 @@ import java.util.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
+class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
 
     private lateinit var binding : FragmentHomeBinding
-    private lateinit var alertCustomBinding : CreateroomAlertviewBinding
     private lateinit var homeAdapter : HomeAdapter
     private val viewModel : HomeViewModel by viewModels()
     @Inject
     lateinit var fireBaseRepository: FireBaseRepository
-
+    lateinit var alertRoomRepository : AlertRoomFactory
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -46,7 +45,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        initAlertBinding()
+        alertRoomRepository = AlertRoomFactory(requireContext())
         setUpGameRoomRecyclerView()
     }
 
@@ -61,26 +60,13 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
                 adapter = homeAdapter
             }
             homeCreateGameRoomBtn.setOnClickListener {
-                AlertDialog.Builder(requireContext())
-                    .setView(alertCustomBinding.root)
-                    .setTitle(getString(R.string.ALERT_CRAETEROOM))
-                    .setPositiveButton(getString(R.string.ALERT_OK)) { _, _ ->
-                        var numberString = ""
-                        alertCustomBinding.apply {
-                            val numberTextViews = arrayListOf(
-                                alertNumber1TextView,alertNumber2TextView,alertNumber3TextView,alertNumber4TextView
-                            )
-                            numberTextViews.forEach {
-                                numberString+=it.text.toString()
-                            }
-                        }
-
-                            val gameRoom = createGameRoom(numberString)
-                            val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
-                            findNavController().navigate(action)
+                alertRoomRepository.getCreateRoomAlertView(binding,object : CreateRoomAlertListener{
+                    override fun send(numberString: String) {
+                        val gameRoom = createGameRoom(numberString)
+                        val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
+                        findNavController().navigate(action)
                     }
-                    .setNegativeButton(getString(R.string.ALERT_CANCEL)){ _ , _ -> }
-                    .show()
+                }).show()
             }
             viewModel.getGameRooms().observe(viewLifecycleOwner,{
                 it?.let {
@@ -93,39 +79,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
                         }
                     }
                 }
-
             })
-
-        }
-    }
-
-    private fun initAlertBinding(){
-        val createroomView = LayoutInflater.from(requireContext()).inflate(R.layout.createroom_alertview,binding.root,false)
-        alertCustomBinding = CreateroomAlertviewBinding.bind(createroomView)
-        alertCustomBinding.apply {
-            val numberTextViews = arrayListOf(
-                alertNumber1TextView,alertNumber2TextView,alertNumber3TextView,alertNumber4TextView
-            )
-            numberTextViews.forEach { textView ->
-                textView.setOnClickListener {
-                    textView.text = ""
-                }
-            }
-            val choiceNumbersTextViewID = arrayListOf(
-                alertchoiceNum1TextView,alertchoiceNum2TextView,alertchoiceNum3TextView,alertchoiceNum4TextView,alertchoiceNum5TextView,
-                alertchoiceNum6TextView,alertchoiceNum7TextView,alertchoiceNum8TextView,alertchoiceNum9TextView,alertchoiceNum10TextView
-            )
-            choiceNumbersTextViewID.forEach { textView ->
-                textView.setOnClickListener {
-                    var isSet = false
-                    numberTextViews.forEach {
-                        if (!isSet && it.text.isEmpty()){
-                            isSet = !isSet
-                            it.text = textView.text.toString()
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -147,20 +101,9 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
     }
 
     override fun roomClick(gameRoom: GameRoom) {
-        AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.ALERT_JOINROOM))
-            .setView(alertCustomBinding.root)
-            .setPositiveButton(getString(R.string.ALERT_OK)) { _, _ ->
-                var numberString = ""
-                alertCustomBinding.apply {
-                    val numberTextViews = arrayListOf(
-                        alertNumber1TextView,alertNumber2TextView,alertNumber3TextView,alertNumber4TextView
-                    )
-                    numberTextViews.forEach {
-                        numberString+=it.text
-                    }
-                }
-                if (!InputNumberCheckerUtils.isCurrentNumber(numberString)) return@setPositiveButton else{
+        alertRoomRepository.getCreateRoomAlertView(binding,object : CreateRoomAlertListener{
+            override fun send(numberString: String) {
+                    if (!InputNumberCheckerUtils.isCurrentNumber(numberString)) return
                     gameRoom.apply {
                         joinerAnswer = numberString
                         joiner = "Joiner"
@@ -168,12 +111,10 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener {
                     updateGameRoom(gameRoom)
                     val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
                     findNavController().navigate(action)
-                }
-
             }
-            .setNegativeButton(getString(R.string.ALERT_CANCEL)) { _, _ -> }.show()
 
-
+        }).setTitle(getString(R.string.ALERT_JOINROOM))
+        .show()
 
     }
 

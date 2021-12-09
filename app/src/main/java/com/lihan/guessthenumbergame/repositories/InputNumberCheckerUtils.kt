@@ -1,4 +1,4 @@
-package com.lihan.guessthenumbergame.other
+package com.lihan.guessthenumbergame.repositories
 
 import java.lang.NumberFormatException
 
