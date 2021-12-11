@@ -14,7 +14,6 @@ class HomeViewModel  @Inject constructor(
     val homeRepository: HomeRepository
 ) : ViewModel() {
 
-    fun getGameRooms() : MutableLiveData<MutableList<GameRoom>?> {
-        return homeRepository.gameRooms
-    }
+    fun getGameRooms() =  homeRepository.getGameRooms()
+
 }

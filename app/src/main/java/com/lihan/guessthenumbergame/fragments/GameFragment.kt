@@ -8,14 +8,13 @@ import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
 import com.lihan.guessthenumbergame.*
 import com.lihan.guessthenumbergame.databinding.FragmentGameBinding
-import com.lihan.guessthenumbergame.databinding.NumberCardItemBackBinding
-import com.lihan.guessthenumbergame.databinding.NumberCardItemFrontBinding
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
 import com.lihan.guessthenumbergame.model.Status
@@ -24,6 +23,8 @@ import com.lihan.guessthenumbergame.viewmodel.GameViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.lang.NumberFormatException
 import javax.inject.Inject
+import androidx.activity.OnBackPressedCallback
+
 
 @AndroidEntryPoint
 class GameFragment : Fragment(R.layout.fragment_game) {
@@ -31,15 +32,12 @@ class GameFragment : Fragment(R.layout.fragment_game) {
     private lateinit var binding : FragmentGameBinding
     private val args : GameFragmentArgs by navArgs()
     private val viewModel : GameViewModel by viewModels()
+
     private lateinit var mGameRoom : GameRoom
+    private lateinit var mRoomStatus: RoomStatus
 
-    sealed class Player(var answerPlayer : String,var guessCountPlayer : Int){
-        data class Creator(var answer:String,var guessCount : Int) : Player(answer,guessCount)
-        data class Joiner(var answer:String,var guessCount: Int) : Player(answer,guessCount)
-    }
-    private lateinit var player: Player
     private var otherSideAnswer = ""
-
+    private var guessCounter = 0
     private var isCreator = false
 
     @Inject
@@ -56,54 +54,67 @@ class GameFragment : Fragment(R.layout.fragment_game) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val callback: OnBackPressedCallback =
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    // Handle the back button event
+                    log("Handle onBack Pressed")
+                    exitEvent()
+
+                }
+                fun exitEvent(){
+                    mRoomStatus.apply {
+                        status = if (isCreator) Status.CreatorExitGame.name else Status.JoinerExitGame.name
+                    }
+                    fireBaseRepository.getGameRoomsStatusChildRef(mGameRoom.roomFullId).setValue(mRoomStatus).addOnCompleteListener {
+                        findNavController().popBackStack()
+                    }
+                }
+
+            }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, callback)
+
         binding.apply {
             args.gameRoom.apply {
-                if (checkIsCreator(this.joiner)){
-                    roomStatusTextView.text = Constants.CREATE_WAITING_FOR_JOINER
-                    player = Player.Creator(this.creatorAnswer,0)
-                    isCreator = true
-                }else{
-                    roomStatusTextView.text = Constants.JOINER_CREATOR_TURN
-                    player = Player.Joiner(this.joinerAnswer,0)
-                    isCreator = false
-                }
+                isCreator = checkIsCreator(this.joiner)
                 mGameRoom = this
             }
+            viewModel.getGameRoom(mGameRoom.roomFullId).observe(viewLifecycleOwner,{ fbGameRoom ->
+                mGameRoom = fbGameRoom.also {
+                    roomIDtextView.text = it.id.toString()
+                }
+                otherSideAnswer = if (isCreator){
+                    fbGameRoom.joinerAnswer
+                }else{
+                    fbGameRoom.creatorAnswer
+                }
+
+
+            })
             viewModel.getRoomStatus(mGameRoom.roomFullId).observe(viewLifecycleOwner,{ fbRoomStatus ->
+                mRoomStatus = fbRoomStatus
                 when(isCreator){
                     true ->{
                         when(fbRoomStatus.status){
-                            Status.RoomCreated.name ->{ roomIDtextView.text = mGameRoom.id.toString() }
-                            Status.StartGame.name ->{
-                                getGameRoomFromFireBase()
-                                roomStatusTextView.text = "START"
-                            }
-                            Status.CreatorWin.name ->{
-                                roomStatusTextView.text = "Win 你猜了: ${fbRoomStatus.creatorGuess} 次"
-                            }
-                            Status.JoinerWin.name ->{
-                                roomStatusTextView.text = "Loss 對方猜了: ${fbRoomStatus.joinersGuess} 次"
-                            }
-                            Status.EndGame.name ->{
-                                roomStatusTextView.text = "End Game Uploading..."
-                            }
+                            Status.RoomCreated.name ->{ upDateStatusTextView(Status.RoomCreated.name) }
+                            Status.StartGame.name ->{ upDateStatusTextView(Status.StartGame.name) }
+                            Status.CreatorEndGame.name ->{ upDateStatusTextView("EndGame Wait Joiner") }
+                            Status.JoinerEndGame.name ->{ upDateStatusTextView("Partner is EndGame") }
+                            Status.EndGame.name ->{ upDateStatusTextView("Partner Used : ${fbRoomStatus.joinersGuess} Times") }
+                            Status.CreatorExitGame.name->{ viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId) }
+                            Status.JoinerExitGame.name->{ upDateStatusTextView(Status.RoomCreated.name) }
 
                         }
                     }
                     false->{
                         when(fbRoomStatus.status){
                             Status.RoomCreated.name -> { }
-                            Status.StartGame.name ->{
-                                roomIDtextView.text = mGameRoom.id.toString()
-                                roomStatusTextView.text = "START"
-                                getGameRoomFromFireBase()
-
-                            }
-                            Status.CreatorWin.name ->{ roomStatusTextView.text = "Loss 對方猜了: ${fbRoomStatus.creatorGuess} 次" }
-                            Status.JoinerWin.name ->{ roomStatusTextView.text = "Win 你猜了: ${fbRoomStatus.joinersGuess} 次" }
-                            Status.EndGame.name ->{
-                                roomStatusTextView.text = "End Game Uploading..."
-                            }
+                            Status.StartGame.name ->{ upDateStatusTextView(Status.StartGame.name) }
+                            Status.CreatorEndGame.name ->{ upDateStatusTextView("Partner is EndGame")}
+                            Status.JoinerEndGame.name ->{ upDateStatusTextView("EndGame Wait Creator")}
+                            Status.EndGame.name ->{upDateStatusTextView("Partner Used : ${fbRoomStatus.creatorGuess} Times") }
+                            Status.JoinerExitGame.name->{ viewModel.removeJoinerInGameRoom(mGameRoom)}
+                            Status.CreatorExitGame.name->{findNavController().popBackStack()}
                         }
                     }
                 }
@@ -131,7 +142,7 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                     cleanNumbersTextView(numbersTextViewID)
                 }
             }
-            numbercarditemfront.answerTextView.text = player.answerPlayer
+            numbercarditemfront.answerTextView.text = (if (isCreator) mGameRoom.creatorAnswer else mGameRoom.joinerAnswer).toString()
             binding.easyFlipView.flipTheView()
             numbercarditemfront.imageView.setOnClickListener {
                 binding.easyFlipView.flipTheView()
@@ -141,6 +152,10 @@ class GameFragment : Fragment(R.layout.fragment_game) {
             }
         }
 
+    }
+
+    private fun upDateStatusTextView(displayText: String) {
+        binding.roomStatusTextView.text = displayText
     }
 
 
@@ -154,7 +169,7 @@ class GameFragment : Fragment(R.layout.fragment_game) {
     }
 
     private fun toCompare(numbers: ArrayList<Int>) {
-        player.guessCountPlayer++
+        guessCounter++
         val otherAnswers = otherSideAnswer.toCharArray()
         var resultA = 0
         var resultB = 0
@@ -176,7 +191,7 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                 }
             }
         }
-        val resultMessage = "$numbersString -> ${resultA}A${resultB}B"
+        val resultMessage = "$guessCounter.$numbersString -> ${resultA}A${resultB}B"
         binding.gameOutput.append("${resultMessage}\n")
         if (resultA == 4){
             uploadResult()
@@ -184,35 +199,27 @@ class GameFragment : Fragment(R.layout.fragment_game) {
     }
 
     private fun uploadResult() {
-            fireBaseRepository.getGameRoomsStatusChildRef(mGameRoom.roomFullId)
-                .addListenerForSingleValueEvent(object : ValueEventListener{
-                    override fun onDataChange(snapshot: DataSnapshot) {
-                        val roomStatus = snapshot.getValue(RoomStatus::class.java)
-                        roomStatus?.let {
-                            when(isCreator){
-                                true ->{
-                                    it.creatorGuess = player.guessCountPlayer
-                                    it.status = Status.CreatorWin.name
-                                }
-                                false ->{
-                                    it.joinersGuess = player.guessCountPlayer
-                                    it.status = Status.JoinerWin.name
-                                }
-                            }
-                            uploadRoomStatus(it)
-                        }
-                    }
-
-                    private fun uploadRoomStatus(it: RoomStatus) {
-                        fireBaseRepository.getGameRoomsStatusChildRef(mGameRoom.roomFullId).setValue(it)
-                    }
-
-                    override fun onCancelled(error: DatabaseError) {
-                        TODO("Not yet implemented")
-                    }
-                })
-
-
+        mRoomStatus.apply {
+            when(true){
+                isCreator && joinersGuess>0 ->{
+                    creatorGuess = guessCounter
+                    status = Status.EndGame.name
+                }
+                !isCreator && creatorGuess>0 ->{
+                    joinersGuess = guessCounter
+                    status = Status.EndGame.name
+                }
+                isCreator ->{
+                    creatorGuess = guessCounter
+                    status = Status.CreatorEndGame.name
+                }
+                !isCreator->{
+                    joinersGuess = guessCounter
+                    status = Status.JoinerEndGame.name
+                }
+            }
+        }
+        viewModel.setRoomStatus(mRoomStatus)
     }
 
     private fun checkIsCreator(joiner: String): Boolean {
@@ -220,27 +227,6 @@ class GameFragment : Fragment(R.layout.fragment_game) {
     }
 
 
-    private fun getGameRoomFromFireBase(){
-        fireBaseRepository.getGameRoomsChildRef(mGameRoom.roomFullId)
-            .addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot){
-                val gameRoom  = snapshot.getValue(GameRoom::class.java)
-                gameRoom?.let {
-                    mGameRoom = it
-                    otherSideAnswer = when(isCreator){
-                        true->{
-                            it.joinerAnswer
-                        }
-                        false->{
-                            it.creatorAnswer
-                        }
-                    }
-                }
-
-            }
-            override fun onCancelled(error: DatabaseError) {} }
-        )
-    }
 
 
 

@@ -10,6 +10,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.lihan.guessthenumbergame.R
 import com.lihan.guessthenumbergame.databinding.FragmentHomeBinding
+import com.lihan.guessthenumbergame.log
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
 import com.lihan.guessthenumbergame.model.Status
@@ -32,7 +33,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
     private val viewModel : HomeViewModel by viewModels()
     @Inject
     lateinit var fireBaseRepository: FireBaseRepository
-    lateinit var alertRoomRepository : AlertRoomFactory
+    lateinit var alertRoomFactory : AlertRoomFactory
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -45,7 +46,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        alertRoomRepository = AlertRoomFactory(requireContext())
+        alertRoomFactory = AlertRoomFactory(requireContext())
         setUpGameRoomRecyclerView()
     }
 
@@ -60,36 +61,34 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
                 adapter = homeAdapter
             }
             homeCreateGameRoomBtn.setOnClickListener {
-                alertRoomRepository.getCreateRoomAlertView(binding,object : CreateRoomAlertListener{
+                alertRoomFactory.getCreateRoomAlertView(binding,object : CreateRoomAlertListener{
                     override fun send(numberString: String) {
-                        val gameRoom = createGameRoom(numberString)
+                        val gameRoom = creatorIntoTheRoom(numberString)
                         val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
                         findNavController().navigate(action)
                     }
                 }).show()
             }
             viewModel.getGameRooms().observe(viewLifecycleOwner,{
-                it?.let {
-                    if (it.size != 0){
                         homeGameRoomRecyclerView.apply {
                             homeAdapter = HomeAdapter(it).also {
                                 it.roomClickListener = this@HomeFragment
                             }
                             adapter = homeAdapter
                         }
-                    }
-                }
+
+
             })
         }
     }
 
-    private fun createGameRoom(creatorNumberString: String): GameRoom {
+    private fun creatorIntoTheRoom(creatorNumberString: String): GameRoom {
         val myRef = fireBaseRepository.getGameRoomsRef().push()
         val timeString = Date().time.toString()
-        val formatedKey = timeString.substring(timeString.length - 4).toInt()
+        val id = timeString.substring(timeString.length - 4).toInt()
         val roomFullid = myRef.key!!
         val gameRoom = GameRoom(
-            roomFullid,formatedKey, "me", "", 5000, creatorNumberString, ""
+            roomFullid,id, "Creator", "", 5000, creatorNumberString, ""
         )
         myRef.setValue(gameRoom)
 
@@ -101,14 +100,14 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
     }
 
     override fun roomClick(gameRoom: GameRoom) {
-        alertRoomRepository.getCreateRoomAlertView(binding,object : CreateRoomAlertListener{
+        alertRoomFactory.getCreateRoomAlertView(binding,object : CreateRoomAlertListener{
             override fun send(numberString: String) {
                     if (!InputNumberCheckerUtils.isCurrentNumber(numberString)) return
                     gameRoom.apply {
                         joinerAnswer = numberString
                         joiner = "Joiner"
                     }
-                    updateGameRoom(gameRoom)
+                    joinerIntoTheRoom(gameRoom)
                     val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
                     findNavController().navigate(action)
             }
@@ -118,7 +117,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
 
     }
 
-    private fun updateGameRoom(gameRoom: GameRoom) {
+    private fun joinerIntoTheRoom(gameRoom: GameRoom) {
         fireBaseRepository.getGameRoomsChildRef(gameRoom.roomFullId).setValue(gameRoom)
         val roomStatus = RoomStatus(gameRoom.roomFullId, Status.StartGame.name,0,0)
         fireBaseRepository.getGameRoomsStatusChildRef(gameRoom.roomFullId).setValue(roomStatus)
