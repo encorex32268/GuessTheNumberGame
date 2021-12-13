@@ -24,6 +24,10 @@ import dagger.hilt.android.AndroidEntryPoint
 import java.lang.NumberFormatException
 import javax.inject.Inject
 import androidx.activity.OnBackPressedCallback
+import androidx.lifecycle.whenCreated
+import com.lihan.guessthenumbergame.other.ChoiceNumberAlertListener
+import com.lihan.guessthenumbergame.repositories.AlertRoomFactory
+import com.lihan.guessthenumbergame.repositories.InputNumberCheckerUtils
 
 
 @AndroidEntryPoint
@@ -43,14 +47,18 @@ class GameFragment : Fragment(R.layout.fragment_game) {
     @Inject
     lateinit var fireBaseRepository: FireBaseRepository
 
+    private lateinit var alertRoomFactory: AlertRoomFactory
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        alertRoomFactory = AlertRoomFactory(requireContext())
         binding = FragmentGameBinding.inflate(layoutInflater)
         return binding.root
     }
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -58,17 +66,19 @@ class GameFragment : Fragment(R.layout.fragment_game) {
             object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
                     // Handle the back button event
-                    log("Handle onBack Pressed")
                     exitEvent()
-
                 }
                 fun exitEvent(){
-                    mRoomStatus.apply {
-                        status = if (isCreator) Status.CreatorExitGame.name else Status.JoinerExitGame.name
+                    if(isCreator){
+                        mRoomStatus.status = Status.CreatorExitGame.name
+                    }else{
+                        if(mRoomStatus.status == Status.EndGame.name){
+                            mRoomStatus.status = Status.CreatorExitGame.name
+                        }else{
+                            mRoomStatus.status = Status.JoinerExitGame.name
+                        }
                     }
-                    fireBaseRepository.getGameRoomsStatusChildRef(mGameRoom.roomFullId).setValue(mRoomStatus).addOnCompleteListener {
-                        findNavController().popBackStack()
-                    }
+                    viewModel.setRoomStatus(mRoomStatus)
                 }
 
             }
@@ -88,21 +98,39 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                 }else{
                     fbGameRoom.creatorAnswer
                 }
+                log("onViewCreated ${mGameRoom.toString()}")
 
 
             })
             viewModel.getRoomStatus(mGameRoom.roomFullId).observe(viewLifecycleOwner,{ fbRoomStatus ->
                 mRoomStatus = fbRoomStatus
+                log("onViewCreated ${mRoomStatus.toString()}")
+
+                roomIDtextView.text = ""
+                val idText = roomIDtextView.text.toString()
+                roomIDtextView.text = idText + "\n" + mRoomStatus.status
                 when(isCreator){
                     true ->{
                         when(fbRoomStatus.status){
-                            Status.RoomCreated.name ->{ upDateStatusTextView(Status.RoomCreated.name) }
+                            Status.RoomCreated.name ->{
+                                upDateStatusTextView(Status.RoomCreated.name)
+                                toResetRoomStatus()
+                            }
                             Status.StartGame.name ->{ upDateStatusTextView(Status.StartGame.name) }
                             Status.CreatorEndGame.name ->{ upDateStatusTextView("EndGame Wait Joiner") }
                             Status.JoinerEndGame.name ->{ upDateStatusTextView("Partner is EndGame") }
                             Status.EndGame.name ->{ upDateStatusTextView("Partner Used : ${fbRoomStatus.joinersGuess} Times") }
-                            Status.CreatorExitGame.name->{ viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId) }
-                            Status.JoinerExitGame.name->{ upDateStatusTextView(Status.RoomCreated.name) }
+                            Status.CreatorExitGame.name->{
+                                viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)
+                                findNavController().popBackStack()
+                            }
+                            Status.JoinerExitGame.name->{
+                                upDateStatusTextView(Status.RoomCreated.name)
+                                viewModel.removeJoinerInGameRoom(mGameRoom)
+                                viewModel.setRoomStatus(mRoomStatus.apply {
+                                    status = Status.RoomCreated.name
+                                })
+                            }
 
                         }
                     }
@@ -113,18 +141,26 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             Status.CreatorEndGame.name ->{ upDateStatusTextView("Partner is EndGame")}
                             Status.JoinerEndGame.name ->{ upDateStatusTextView("EndGame Wait Creator")}
                             Status.EndGame.name ->{upDateStatusTextView("Partner Used : ${fbRoomStatus.creatorGuess} Times") }
-                            Status.JoinerExitGame.name->{ viewModel.removeJoinerInGameRoom(mGameRoom)}
-                            Status.CreatorExitGame.name->{findNavController().popBackStack()}
+                            Status.JoinerExitGame.name->{
+                                findNavController().popBackStack()
+                            }
+                            Status.CreatorExitGame.name->{
+                                viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)
+                                findNavController().popBackStack()
+                            }
                         }
                     }
                 }
+
             })
             includechoicenumberview.apply {
                 bindingViewInit()
                 val numbersTextViewID = getNumbersTextViewID()
                 guessNumberSendButton2.setOnClickListener {
                     val numbers = arrayListOf<Int>()
+                    var numberString = ""
                     numbersTextViewID.forEach {
+                        numberString += it.text.toString()
                         it.text.toString().apply{
                             try {
                                 numbers.add(this.toInt())
@@ -133,9 +169,9 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             }
                         }
                     }
-                    if(numbers.size != 4){
-                        return@setOnClickListener
-                    }else{
+                    if(numbers.size != 4){ return@setOnClickListener }
+                    else if (!InputNumberCheckerUtils.isCurrentNumber(numberString)){return@setOnClickListener}
+                    else{
                         toCompare(numbers)
                         gameScrollView.fullScroll(ScrollView.FOCUS_DOWN)
                     }
@@ -152,6 +188,26 @@ class GameFragment : Fragment(R.layout.fragment_game) {
             }
         }
 
+    }
+
+    private fun toResetRoomStatus() {
+        binding.apply {
+            if(mGameRoom.joinerAnswer.isEmpty() && mRoomStatus.joinersGuess > 0){
+                gameOutput.text = ""
+                alertRoomFactory.getChoiceNumberAlertView(this,object : ChoiceNumberAlertListener{
+                    override fun okClick(numberString: String) {
+                        viewModel.setGameRoom(mGameRoom.apply {
+                            creatorAnswer = numberString
+                        })
+                        viewModel.setRoomStatus(mRoomStatus.apply {
+                            joinersGuess = 0
+
+                        })
+                    }
+                }).show()
+            }
+
+        }
     }
 
     private fun upDateStatusTextView(displayText: String) {

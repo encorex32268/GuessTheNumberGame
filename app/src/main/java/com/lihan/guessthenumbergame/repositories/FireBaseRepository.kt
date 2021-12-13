@@ -26,4 +26,9 @@ class FireBaseRepository(
 
     }
 
+    fun removeAllRooms() {
+        FirebaseDatabase.getInstance().getReference("GameRooms").removeValue()
+        FirebaseDatabase.getInstance().getReference("GameRoomStatus").removeValue()
+    }
+
 }

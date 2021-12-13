@@ -7,4 +7,10 @@ data class RoomStatus(
     var creatorGuess : Int ,
 ){
     constructor():this("","",0,0)
+
+    override fun toString(): String {
+        return "RoomStatus(roomFullID='$roomFullID', status='$status', joinersGuess=$joinersGuess, creatorGuess=$creatorGuess)"
+    }
+
+
 }

@@ -1,5 +1,7 @@
 package com.lihan.guessthenumbergame
 
+import android.view.View
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import com.lihan.guessthenumbergame.databinding.ChoicenumberViewBinding

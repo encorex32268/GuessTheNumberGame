@@ -1,10 +1,7 @@
 package com.lihan.guessthenumbergame.repositories
 
 import android.content.Context
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.navigation.fragment.NavHostFragment.findNavController
 import androidx.navigation.fragment.findNavController
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -80,4 +77,10 @@ class GameRepository(
         val firebase = FirebaseDatabase.getInstance()
         firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(mRoomStatus.roomFullID).setValue(mRoomStatus)
     }
+
+    fun setGameRoom(gameRoom: GameRoom) {
+        val firebase = FirebaseDatabase.getInstance()
+        firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMS_PATH)).child(gameRoom.roomFullId).setValue(gameRoom)
+    }
+
 }
