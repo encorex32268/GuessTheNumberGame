@@ -47,7 +47,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        binding = FragmentHomeBinding.inflate(layoutInflater)
+        binding = FragmentHomeBinding.inflate(inflater,container,false)
         return binding.root
     }
 
@@ -75,28 +75,30 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
                         binding.homeProgressBar.setVisibility(View.VISIBLE,true)
                         mGameRoom = creatorIntoTheRoom(numberString)
                         fireBaseRepository.getGameRoomsChildRef(mGameRoom.roomFullId).setValue(mGameRoom).addOnCompleteListener {
-                            val roomStatus = RoomStatus(mGameRoom.roomFullId, Status.RoomCreated.name,0,0)
-                            fireBaseRepository.getGameRoomsStatusChildRef(mGameRoom.roomFullId).setValue(roomStatus).addOnCompleteListener {
-                                binding.homeProgressBar.setVisibility(View.INVISIBLE,false)
+                            if(it.isComplete){
+                                val roomStatus = RoomStatus(mGameRoom.roomFullId, Status.RoomCreated.name,0,0)
+                                fireBaseRepository.getGameRoomsStatusChildRef(mGameRoom.roomFullId).setValue(roomStatus).addOnCompleteListener {
+                                    if(it.isComplete){
+                                        binding.homeProgressBar.setVisibility(View.INVISIBLE,false)
+                                    }
+                                }
                             }
+
                         }
                     }
                 }).show()
             }
             viewModel.getGameRooms().observe(viewLifecycleOwner,{
-                        homeGameRoomRecyclerView.apply {
-                            homeAdapter = HomeAdapter(it).also {
-                                it.roomClickListener = this@HomeFragment
-                            }
-                            adapter = homeAdapter
-                        }
-
-
+                homeAdapter.apply {
+                    this.gameRooms = it
+                    notifyDataSetChanged()
+                }
             })
             homeProgressBar.visibilityListener = object : ViewVisibilityListener{
                 override fun doSomeTing() {
                     log("doSomeThing $mGameRoom")
-                    binding.root.findNavController().navigate(HomeFragmentDirections.actionHomeFragmentToGameFragment(mGameRoom))
+                    val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(mGameRoom)
+                    findNavController().navigate(action)
 
                 }
             }
@@ -136,10 +138,15 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
     private fun joinerIntoTheRoom(gameRoom: GameRoom) {
         binding.homeProgressBar.setVisibility(View.VISIBLE,true)
         fireBaseRepository.getGameRoomsChildRef(gameRoom.roomFullId).setValue(gameRoom).addOnCompleteListener {
-            val roomStatus = RoomStatus(gameRoom.roomFullId, Status.StartGame.name,0,0)
-            fireBaseRepository.getGameRoomsStatusChildRef(gameRoom.roomFullId).setValue(roomStatus).addOnCompleteListener {
-                binding.homeProgressBar.setVisibility(View.INVISIBLE,false)
+            if(it.isComplete){
+                val roomStatus = RoomStatus(gameRoom.roomFullId, Status.StartGame.name,0,0)
+                fireBaseRepository.getGameRoomsStatusChildRef(gameRoom.roomFullId).setValue(roomStatus).addOnCompleteListener {
+                    if(it.isComplete){
+                        binding.homeProgressBar.setVisibility(View.INVISIBLE,false)
+                    }
+                }
             }
+
         }
 
     }

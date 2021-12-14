@@ -26,6 +26,7 @@ import javax.inject.Inject
 import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.whenCreated
 import com.lihan.guessthenumbergame.other.ChoiceNumberAlertListener
+import com.lihan.guessthenumbergame.other.Resources
 import com.lihan.guessthenumbergame.repositories.AlertRoomFactory
 import com.lihan.guessthenumbergame.repositories.InputNumberCheckerUtils
 
@@ -98,10 +99,15 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                 }else{
                     fbGameRoom.creatorAnswer
                 }
-                log("onViewCreated ${mGameRoom.toString()}")
-
-
             })
+            viewModel.getRemoveGameRoomAndStatus().observe(viewLifecycleOwner,{
+                when(it){
+                    is Resources.Success ->{ findNavController().popBackStack() }
+                    is Resources.Fail->{ }
+                    is Resources.Loading->{ }
+                }
+            })
+
             viewModel.getRoomStatus(mGameRoom.roomFullId).observe(viewLifecycleOwner,{ fbRoomStatus ->
                 mRoomStatus = fbRoomStatus
                 log("onViewCreated ${mRoomStatus.toString()}")
@@ -122,7 +128,9 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             Status.EndGame.name ->{ upDateStatusTextView("Partner Used : ${fbRoomStatus.joinersGuess} Times") }
                             Status.CreatorExitGame.name->{
                                 viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)
-                                findNavController().popBackStack()
+                                viewModel.setRoomStatus(mRoomStatus.apply {
+                                    status = Status.RoomCreated.name
+                                })
                             }
                             Status.JoinerExitGame.name->{
                                 upDateStatusTextView(Status.RoomCreated.name)
@@ -144,10 +152,7 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             Status.JoinerExitGame.name->{
                                 findNavController().popBackStack()
                             }
-                            Status.CreatorExitGame.name->{
-                                viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)
-                                findNavController().popBackStack()
-                            }
+                            Status.CreatorExitGame.name->{ viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)}
                         }
                     }
                 }

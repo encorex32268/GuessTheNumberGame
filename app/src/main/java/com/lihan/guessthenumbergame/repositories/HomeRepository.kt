@@ -19,7 +19,9 @@ class HomeRepository(
 ) {
 
     private val gameRooms = MutableLiveData<ArrayList<GameRoom>>()
-
+    init {
+        getGameRooms()
+    }
     fun getGameRooms() : MutableLiveData<ArrayList<GameRoom>>{
         val firebase  = FirebaseDatabase.getInstance()
         val myRef = firebase.getReference("GameRooms")

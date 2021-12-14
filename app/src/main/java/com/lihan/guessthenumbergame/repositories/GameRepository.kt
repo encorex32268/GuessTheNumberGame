@@ -1,16 +1,16 @@
 package com.lihan.guessthenumbergame.repositories
 
 import android.content.Context
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.navigation.fragment.findNavController
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.google.android.gms.tasks.Task
+import com.google.firebase.database.*
 import com.lihan.guessthenumbergame.R
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
 import com.lihan.guessthenumbergame.model.Status
+import com.lihan.guessthenumbergame.other.Resources
 
 class GameRepository(
     val context : Context
@@ -18,6 +18,8 @@ class GameRepository(
 
     private val mRoomStatus = MutableLiveData<RoomStatus>()
     private val mGameRoom = MutableLiveData<GameRoom>()
+
+    private val removeGameRoomResult = MutableLiveData<Resources>()
 
     fun getRoomStatus(roomFullID : String) : MutableLiveData<RoomStatus>{
         val firebase = FirebaseDatabase.getInstance()
@@ -53,11 +55,8 @@ class GameRepository(
         return mGameRoom
     }
 
-    fun removeGameRoomAndStatus(roomFullID: String){
-        val firebase = FirebaseDatabase.getInstance()
-        firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(roomFullID).removeValue().addOnCompleteListener {
-            firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMS_PATH)).child(roomFullID).removeValue()
-        }
+    fun getRemoveGameRoomAndStatus() : MutableLiveData<Resources>{
+        return removeGameRoomResult
     }
 
     fun removeJoinerInGameRoom(gameRoom: GameRoom){
@@ -82,5 +81,36 @@ class GameRepository(
         val firebase = FirebaseDatabase.getInstance()
         firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMS_PATH)).child(gameRoom.roomFullId).setValue(gameRoom)
     }
+
+    fun removeGameRoomAndStatus(roomFullID: String) {
+        val firebase = FirebaseDatabase.getInstance()
+        firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(roomFullID).removeValue().addOnCompleteListener {
+            if (taskHandler(it) == Resources.Success){
+                firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMS_PATH)).child(roomFullID).removeValue().addOnCompleteListener{ gameRooms ->
+                    removeGameRoomResult.postValue(taskHandler(it))
+                    mRoomStatus.postValue(RoomStatus())
+                    mGameRoom.postValue(GameRoom())
+                }
+            }
+        }
+    }
+
+
+    private fun taskHandler(task : Task<Void>) : Resources {
+        var result  : Resources = Resources.Loading
+        when {
+            task.isSuccessful -> {
+                result = Resources.Success
+            }
+            task.isCanceled -> {
+                result = Resources.Fail
+            }
+            task.isComplete ->{
+                result = Resources.Success
+            }
+        }
+        return result
+    }
+
 
 }
