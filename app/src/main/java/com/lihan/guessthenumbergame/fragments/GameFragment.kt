@@ -152,7 +152,12 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             Status.JoinerExitGame.name->{
                                 findNavController().popBackStack()
                             }
-                            Status.CreatorExitGame.name->{ viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)}
+                            Status.CreatorExitGame.name->{
+                                viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)
+                                viewModel.setRoomStatus(mRoomStatus.apply {
+                                    status = Status.RoomCreated.name
+                                })
+                            }
                         }
                     }
                 }

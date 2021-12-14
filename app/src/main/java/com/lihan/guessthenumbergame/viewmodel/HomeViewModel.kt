@@ -16,4 +16,9 @@ class HomeViewModel  @Inject constructor(
 
     fun getGameRooms() =  homeRepository.getGameRooms()
 
+
+    fun createGameRoom(gameRoom: GameRoom) = homeRepository.createGameRoom(gameRoom)
+
+    fun getFirebaseResult() = homeRepository.result
+
 }

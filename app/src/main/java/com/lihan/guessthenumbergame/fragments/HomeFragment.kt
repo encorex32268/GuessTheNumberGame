@@ -18,6 +18,7 @@ import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
 import com.lihan.guessthenumbergame.model.Status
 import com.lihan.guessthenumbergame.other.CreateRoomAlertListener
+import com.lihan.guessthenumbergame.other.Resources
 import com.lihan.guessthenumbergame.repositories.FireBaseRepository
 import com.lihan.guessthenumbergame.repositories.InputNumberCheckerUtils
 import com.lihan.guessthenumbergame.other.RoomClickListener
@@ -68,23 +69,28 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
                 layoutManager = LinearLayoutManager(requireContext())
                 adapter = homeAdapter
             }
+
+            viewModel.getFirebaseResult().observe(viewLifecycleOwner,{
+                when(it){
+                    is Resources.Success->{
+                        binding.homeProgressBar.setVisibility(View.INVISIBLE,false)
+                    }
+                    is Resources.Fail->{}
+                    is Resources.Loading->{
+                        binding.homeProgressBar.setVisibility(View.VISIBLE,true)
+                    }
+                }
+            })
+
+
             homeCreateGameRoomBtn.setOnClickListener {
                 alertRoomFactory.getCreateRoomAlertView(binding,object : CreateRoomAlertListener{
                     override fun send(numberString: String) {
                         if (!InputNumberCheckerUtils.isCurrentNumber(numberString)) return
-                        binding.homeProgressBar.setVisibility(View.VISIBLE,true)
-                        mGameRoom = creatorIntoTheRoom(numberString)
-                        fireBaseRepository.getGameRoomsChildRef(mGameRoom.roomFullId).setValue(mGameRoom).addOnCompleteListener {
-                            if(it.isComplete){
-                                val roomStatus = RoomStatus(mGameRoom.roomFullId, Status.RoomCreated.name,0,0)
-                                fireBaseRepository.getGameRoomsStatusChildRef(mGameRoom.roomFullId).setValue(roomStatus).addOnCompleteListener {
-                                    if(it.isComplete){
-                                        binding.homeProgressBar.setVisibility(View.INVISIBLE,false)
-                                    }
-                                }
-                            }
 
-                        }
+                        mGameRoom = creatorIntoTheRoom(numberString)
+                        //Create
+                        viewModel.createGameRoom(mGameRoom)
                     }
                 }).show()
             }
@@ -96,7 +102,6 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
             })
             homeProgressBar.visibilityListener = object : ViewVisibilityListener{
                 override fun doSomeTing() {
-                    log("doSomeThing $mGameRoom")
                     val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(mGameRoom)
                     findNavController().navigate(action)
 
