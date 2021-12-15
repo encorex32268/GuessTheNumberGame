@@ -102,7 +102,25 @@ class GameFragment : Fragment(R.layout.fragment_game) {
             })
             viewModel.getRemoveGameRoomAndStatus().observe(viewLifecycleOwner,{
                 when(it){
-                    is Resources.Success ->{ findNavController().popBackStack() }
+                    is Resources.Success ->{
+                        viewModel.setRoomStatus(mRoomStatus.apply {
+                            status = Status.RoomCreated.name
+                        })
+                        findNavController().popBackStack()
+                    }
+                    is Resources.Fail->{ }
+                    is Resources.Loading->{ }
+                }
+            })
+
+            viewModel.getRemoveJoinerInGameRoom().observe(viewLifecycleOwner,{
+                when(it){
+                    is Resources.Success ->{
+                        viewModel.setRoomStatus(mRoomStatus.apply {
+                            status = Status.RoomCreated.name
+                        })
+                        findNavController().popBackStack()
+                    }
                     is Resources.Fail->{ }
                     is Resources.Loading->{ }
                 }
@@ -128,16 +146,10 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             Status.EndGame.name ->{ upDateStatusTextView("Partner Used : ${fbRoomStatus.joinersGuess} Times") }
                             Status.CreatorExitGame.name->{
                                 viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)
-                                viewModel.setRoomStatus(mRoomStatus.apply {
-                                    status = Status.RoomCreated.name
-                                })
                             }
                             Status.JoinerExitGame.name->{
                                 upDateStatusTextView(Status.RoomCreated.name)
                                 viewModel.removeJoinerInGameRoom(mGameRoom)
-                                viewModel.setRoomStatus(mRoomStatus.apply {
-                                    status = Status.RoomCreated.name
-                                })
                             }
 
                         }
@@ -149,14 +161,9 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             Status.CreatorEndGame.name ->{ upDateStatusTextView("Partner is EndGame")}
                             Status.JoinerEndGame.name ->{ upDateStatusTextView("EndGame Wait Creator")}
                             Status.EndGame.name ->{upDateStatusTextView("Partner Used : ${fbRoomStatus.creatorGuess} Times") }
-                            Status.JoinerExitGame.name->{
-                                findNavController().popBackStack()
-                            }
+                            Status.JoinerExitGame.name->{ findNavController().popBackStack() }
                             Status.CreatorExitGame.name->{
                                 viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)
-                                viewModel.setRoomStatus(mRoomStatus.apply {
-                                    status = Status.RoomCreated.name
-                                })
                             }
                         }
                     }

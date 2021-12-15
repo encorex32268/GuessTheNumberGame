@@ -16,15 +16,15 @@ class GameViewModel @Inject constructor(
     fun getRoomStatus(roomFullID: String) = gameRepository.getRoomStatus(roomFullID)
     fun getGameRoom(roomFullID: String) = gameRepository.getGameRoom(roomFullID)
     fun getRemoveGameRoomAndStatus() = gameRepository.getRemoveGameRoomAndStatus()
+    fun getRemoveJoinerInGameRoom() = gameRepository.getRemoveJoinerInGameRoom()
 
 
-
-    fun removeJoinerInGameRoom(gameRoom : GameRoom) = gameRepository.removeJoinerInGameRoom(gameRoom)
 
     //functions
     fun setRoomStatus(mRoomStatus: RoomStatus)  = gameRepository.setRoomStatus(mRoomStatus)
     fun setGameRoom(gameRoom : GameRoom)  = gameRepository.setGameRoom(gameRoom)
     fun removeGameRoomAndStatus(roomFullID: String) = gameRepository.removeGameRoomAndStatus(roomFullID)
+    fun removeJoinerInGameRoom(gameRoom : GameRoom) = gameRepository.removeJoinerInGameRoom(gameRoom)
 
 
 }

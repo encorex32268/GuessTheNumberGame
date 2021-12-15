@@ -5,8 +5,11 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -26,6 +29,8 @@ import com.lihan.guessthenumbergame.repositories.AlertRoomFactory
 import com.lihan.guessthenumbergame.ui.HomeAdapter
 import com.lihan.guessthenumbergame.viewmodel.HomeViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
 
@@ -33,15 +38,13 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
-
+    private val TAG = HomeFragment::class.java.simpleName
     private lateinit var binding : FragmentHomeBinding
     private lateinit var homeAdapter : HomeAdapter
     private val viewModel : HomeViewModel by viewModels()
     @Inject
     lateinit var fireBaseRepository: FireBaseRepository
     lateinit var alertRoomFactory : AlertRoomFactory
-
-    private lateinit var mGameRoom: GameRoom
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -56,8 +59,11 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
         super.onViewCreated(view, savedInstanceState)
         alertRoomFactory = AlertRoomFactory(requireContext())
         setUpGameRoomRecyclerView()
+        setUpViewModel()
 
     }
+
+
 
     private fun setUpGameRoomRecyclerView() {
         binding.apply {
@@ -69,47 +75,80 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
                 layoutManager = LinearLayoutManager(requireContext())
                 adapter = homeAdapter
             }
-
-            viewModel.getFirebaseResult().observe(viewLifecycleOwner,{
-                when(it){
-                    is Resources.Success->{
-                        binding.homeProgressBar.setVisibility(View.INVISIBLE,false)
-                    }
-                    is Resources.Fail->{}
-                    is Resources.Loading->{
-                        binding.homeProgressBar.setVisibility(View.VISIBLE,true)
-                    }
-                }
-            })
-
-
             homeCreateGameRoomBtn.setOnClickListener {
                 alertRoomFactory.getCreateRoomAlertView(binding,object : CreateRoomAlertListener{
                     override fun send(numberString: String) {
                         if (!InputNumberCheckerUtils.isCurrentNumber(numberString)) return
-
-                        mGameRoom = creatorIntoTheRoom(numberString)
-                        //Create
-                        viewModel.createGameRoom(mGameRoom)
+                        viewModel.createGameRoom(creatorIntoTheRoom(numberString))
                     }
                 }).show()
             }
-            viewModel.getGameRooms().observe(viewLifecycleOwner,{
-                homeAdapter.apply {
-                    this.gameRooms = it
-                    notifyDataSetChanged()
-                }
-            })
-            homeProgressBar.visibilityListener = object : ViewVisibilityListener{
-                override fun doSomeTing() {
-                    val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(mGameRoom)
-                    findNavController().navigate(action)
+        }
+    }
 
+    private fun setUpViewModel() {
+        lifecycleScope.launch {
+            viewModel.gameRoomsUIStatus.collect {
+                when (it) {
+                        is HomeViewModel.HomeUIStatus.Loading -> {
+                            binding.homeProgressBar.isVisible = true
+                        }
+                        is HomeViewModel.HomeUIStatus.Success -> {
+                            binding.homeProgressBar.isVisible = false
+                            homeAdapter.apply {
+                                gameRooms = it.data
+                                notifyDataSetChanged()
+                            }
+                        }
+                        is HomeViewModel.HomeUIStatus.Error -> {
+                            binding.homeProgressBar.isVisible = false
+                            Toast.makeText(requireContext(), it.message, Toast.LENGTH_LONG).show()
+                        }
+                        else -> Unit
+                    }
+                }
+            }
+            lifecycleScope.launch {
+                viewModel.createRoomsUIStatus.collect{
+                    when(it){
+                        is HomeViewModel.HomeUIStatus.Loading->{
+                            binding.homeProgressBar.isVisible = true
+                        }
+                        is HomeViewModel.HomeUIStatus.Success->{
+                            binding.homeProgressBar.isVisible = false
+                            val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(it.data[0])
+                            findNavController().navigate(action)
+                        }
+                        is HomeViewModel.HomeUIStatus.Error->{
+                            binding.homeProgressBar.isVisible = false
+                            Toast.makeText(requireContext(),it.message,Toast.LENGTH_LONG).show()
+                        }
+                        else -> Unit
+                    }
+                }
+            }
+            lifecycleScope.launch {
+                viewModel.joinerIntoTheRoom.collect {
+                    when (it) {
+                        is HomeViewModel.HomeUIStatus.Loading -> {
+                            binding.homeProgressBar.isVisible = true
+                        }
+                        is HomeViewModel.HomeUIStatus.Success -> {
+                            binding.homeProgressBar.isVisible = false
+                            val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(it.data[0])
+                            findNavController().navigate(action)
+                        }
+                        is HomeViewModel.HomeUIStatus.Error -> {
+                            binding.homeProgressBar.isVisible = false
+                            Toast.makeText(requireContext(), it.message, Toast.LENGTH_LONG).show()
+                        }
+                        else -> Unit
+                    }
                 }
             }
 
         }
-    }
+
 
     private fun creatorIntoTheRoom(creatorNumberString: String): GameRoom {
         val myRef = fireBaseRepository.getGameRoomsRef().push()
@@ -130,31 +169,13 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
                         joinerAnswer = numberString
                         joiner = "Joiner"
                     }
-                    mGameRoom = gameRoom
-                    joinerIntoTheRoom(mGameRoom)
-
+                    viewModel.joinerIntoTheRoom(gameRoom)
             }
-
         }).setTitle(getString(R.string.ALERT_JOINROOM))
         .show()
 
     }
 
-    private fun joinerIntoTheRoom(gameRoom: GameRoom) {
-        binding.homeProgressBar.setVisibility(View.VISIBLE,true)
-        fireBaseRepository.getGameRoomsChildRef(gameRoom.roomFullId).setValue(gameRoom).addOnCompleteListener {
-            if(it.isComplete){
-                val roomStatus = RoomStatus(gameRoom.roomFullId, Status.StartGame.name,0,0)
-                fireBaseRepository.getGameRoomsStatusChildRef(gameRoom.roomFullId).setValue(roomStatus).addOnCompleteListener {
-                    if(it.isComplete){
-                        binding.homeProgressBar.setVisibility(View.INVISIBLE,false)
-                    }
-                }
-            }
-
-        }
-
-    }
 
 
 

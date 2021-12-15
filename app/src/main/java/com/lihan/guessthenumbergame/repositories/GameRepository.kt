@@ -20,6 +20,7 @@ class GameRepository(
     private val mGameRoom = MutableLiveData<GameRoom>()
 
     private val removeGameRoomResult = MutableLiveData<Resources>()
+    private val removeJoinerResult = MutableLiveData<Resources>()
 
     fun getRoomStatus(roomFullID : String) : MutableLiveData<RoomStatus>{
         val firebase = FirebaseDatabase.getInstance()
@@ -55,9 +56,7 @@ class GameRepository(
         return mGameRoom
     }
 
-    fun getRemoveGameRoomAndStatus() : MutableLiveData<Resources>{
-        return removeGameRoomResult
-    }
+    fun getRemoveGameRoomAndStatus() = removeGameRoomResult
 
     fun removeJoinerInGameRoom(gameRoom: GameRoom){
         val firebase = FirebaseDatabase.getInstance()
@@ -67,8 +66,10 @@ class GameRepository(
                 joinerAnswer =""
             }
         ).addOnCompleteListener {
-            firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(gameRoom.roomFullId).child("status")
-                .setValue(Status.RoomCreated.name)
+            if(taskHandler(it) == Resources.Success){
+                removeGameRoomResult.postValue(Resources.Success)
+            }
+
         }
     }
 
@@ -111,6 +112,8 @@ class GameRepository(
         }
         return result
     }
+
+    fun getRemoveJoinerInGameRoom() = removeJoinerResult
 
 
 }
