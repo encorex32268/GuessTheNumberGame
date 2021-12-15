@@ -23,8 +23,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 
 
 class HomeViewModel(application : Application) : AndroidViewModel(application) {
-    private val context = getApplication<Application>().applicationContext
-    private val TAG = HomeViewModel::class.java.simpleName
     private val fireBaseRepository = FireBaseRepository(application)
 
     sealed class HomeUIStatus {
@@ -47,11 +45,10 @@ class HomeViewModel(application : Application) : AndroidViewModel(application) {
         getGameRooms()
     }
 
-    fun getGameRooms() {
+    private fun getGameRooms() {
         _gameRoomsUIStatus.value = HomeUIStatus.Loading
-        val firebase = FirebaseDatabase.getInstance()
-        val myRef = firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMS_PATH))
-        myRef.addValueEventListener(object : ValueEventListener {
+        val myRefGameRoom = fireBaseRepository.getGameRoomsRef()
+        myRefGameRoom.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val nowData = arrayListOf<GameRoom>()
                 snapshot.children.forEach {
@@ -71,13 +68,9 @@ class HomeViewModel(application : Application) : AndroidViewModel(application) {
 
     fun createGameRoom(mGameRoom: GameRoom) {
         _createRoomsUIStatus.value = HomeUIStatus.Loading
-        val firebase = FirebaseDatabase.getInstance()
-        val myRefGameRoom =
-            firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMS_PATH))
-                .child(mGameRoom.roomFullId)
-        val myRefGameRoomStatus =
-            firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH))
-                .child(mGameRoom.roomFullId)
+        val myRefGameRoom = fireBaseRepository.getGameRoomsChildRef(mGameRoom.roomFullId)
+        val myRefGameRoomStatus = fireBaseRepository.getGameRoomsStatusChildRef((mGameRoom.roomFullId))
+
         myRefGameRoom.setValue(mGameRoom).addOnCompleteListener {
             if (it.isSuccessful) {
                 myRefGameRoomStatus.setValue(
@@ -102,12 +95,14 @@ class HomeViewModel(application : Application) : AndroidViewModel(application) {
     }
 
     fun joinerIntoTheRoom(gameRoom: GameRoom) {
-        Log.d(TAG, "joinerIntoTheRoom: $gameRoom")
+        val myRefGameRoom = fireBaseRepository.getGameRoomsChildRef(gameRoom.roomFullId)
+        val myRefGameRoomStatus = fireBaseRepository.getGameRoomsStatusChildRef((gameRoom.roomFullId))
+
         _joinerIntoTheRoomUIStatus.value = HomeUIStatus.Loading
-            fireBaseRepository.getGameRoomsChildRef(gameRoom.roomFullId).setValue(gameRoom).addOnCompleteListener {
+        myRefGameRoom.setValue(gameRoom).addOnCompleteListener {
                 if(it.isSuccessful){
                     val roomStatus = RoomStatus(gameRoom.roomFullId, Status.StartGame.name,0,0)
-                    fireBaseRepository.getGameRoomsStatusChildRef(gameRoom.roomFullId).setValue(roomStatus).addOnCompleteListener {
+                    myRefGameRoomStatus.setValue(roomStatus).addOnCompleteListener {
                         if(it.isSuccessful){
                             _joinerIntoTheRoomUIStatus.value = HomeUIStatus.Success(arrayListOf(gameRoom))
                         }
