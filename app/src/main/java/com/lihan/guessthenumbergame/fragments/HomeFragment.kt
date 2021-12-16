@@ -1,7 +1,6 @@
 package com.lihan.guessthenumbergame.fragments
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,27 +9,21 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.lihan.guessthenumbergame.R
-import com.lihan.guessthenumbergame.ViewVisibilityListener
 import com.lihan.guessthenumbergame.databinding.FragmentHomeBinding
-import com.lihan.guessthenumbergame.log
 import com.lihan.guessthenumbergame.model.GameRoom
-import com.lihan.guessthenumbergame.model.RoomStatus
-import com.lihan.guessthenumbergame.model.Status
 import com.lihan.guessthenumbergame.other.CreateRoomAlertListener
-import com.lihan.guessthenumbergame.other.Resources
 import com.lihan.guessthenumbergame.repositories.FireBaseRepository
 import com.lihan.guessthenumbergame.repositories.InputNumberCheckerUtils
 import com.lihan.guessthenumbergame.other.RoomClickListener
 import com.lihan.guessthenumbergame.repositories.AlertRoomFactory
+import com.lihan.guessthenumbergame.status.HomeUIStatus
 import com.lihan.guessthenumbergame.ui.HomeAdapter
 import com.lihan.guessthenumbergame.viewmodel.HomeViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
 
@@ -46,6 +39,9 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
     lateinit var fireBaseRepository: FireBaseRepository
     lateinit var alertRoomFactory : AlertRoomFactory
 
+    private lateinit var gameRoom: GameRoom
+
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -60,10 +56,8 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
         alertRoomFactory = AlertRoomFactory(requireContext())
         setUpGameRoomRecyclerView()
         setUpViewModel()
-
+        viewModel.getGameRooms()
     }
-
-
 
     private fun setUpGameRoomRecyclerView() {
         binding.apply {
@@ -76,10 +70,13 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
                 adapter = homeAdapter
             }
             homeCreateGameRoomBtn.setOnClickListener {
+                it?.apply { isEnabled = false; postDelayed({ isEnabled = true }, 400) } //400 ms
                 alertRoomFactory.getCreateRoomAlertView(binding,object : CreateRoomAlertListener{
                     override fun send(numberString: String) {
                         if (!InputNumberCheckerUtils.isCurrentNumber(numberString)) return
-                        viewModel.createGameRoom(creatorIntoTheRoom(numberString))
+                        gameRoom = creatorIntoTheRoom(numberString)
+                        val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
+                        findNavController().navigate(action)
                     }
                 }).show()
             }
@@ -87,20 +84,20 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
     }
 
     private fun setUpViewModel() {
-        lifecycleScope.launch {
+        lifecycleScope.launchWhenStarted {
             viewModel.gameRoomsUIStatus.collect {
                 when (it) {
-                        is HomeViewModel.HomeUIStatus.Loading -> {
+                        is HomeUIStatus.Loading -> {
                             binding.homeProgressBar.isVisible = true
                         }
-                        is HomeViewModel.HomeUIStatus.Success -> {
+                        is HomeUIStatus.Success -> {
                             binding.homeProgressBar.isVisible = false
                             homeAdapter.apply {
                                 gameRooms = it.data
                                 notifyDataSetChanged()
                             }
                         }
-                        is HomeViewModel.HomeUIStatus.Error -> {
+                        is HomeUIStatus.Error -> {
                             binding.homeProgressBar.isVisible = false
                             Toast.makeText(requireContext(), it.message, Toast.LENGTH_LONG).show()
                         }
@@ -108,45 +105,6 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
                     }
                 }
             }
-            lifecycleScope.launch {
-                viewModel.createRoomsUIStatus.collect{
-                    when(it){
-                        is HomeViewModel.HomeUIStatus.Loading->{
-                            binding.homeProgressBar.isVisible = true
-                        }
-                        is HomeViewModel.HomeUIStatus.Success->{
-                            binding.homeProgressBar.isVisible = false
-                            val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(it.data[0])
-                            findNavController().navigate(action)
-                        }
-                        is HomeViewModel.HomeUIStatus.Error->{
-                            binding.homeProgressBar.isVisible = false
-                            Toast.makeText(requireContext(),it.message,Toast.LENGTH_LONG).show()
-                        }
-                        else -> Unit
-                    }
-                }
-            }
-            lifecycleScope.launch {
-                viewModel.joinerIntoTheRoom.collect {
-                    when (it) {
-                        is HomeViewModel.HomeUIStatus.Loading -> {
-                            binding.homeProgressBar.isVisible = true
-                        }
-                        is HomeViewModel.HomeUIStatus.Success -> {
-                            binding.homeProgressBar.isVisible = false
-                            val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(it.data[0])
-                            findNavController().navigate(action)
-                        }
-                        is HomeViewModel.HomeUIStatus.Error -> {
-                            binding.homeProgressBar.isVisible = false
-                            Toast.makeText(requireContext(), it.message, Toast.LENGTH_LONG).show()
-                        }
-                        else -> Unit
-                    }
-                }
-            }
-
         }
 
 
@@ -169,7 +127,8 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
                         joinerAnswer = numberString
                         joiner = "Joiner"
                     }
-                    viewModel.joinerIntoTheRoom(gameRoom)
+                    val action = HomeFragmentDirections.actionHomeFragmentToGameFragment(gameRoom)
+                    findNavController().navigate(action)
             }
         }).setTitle(getString(R.string.ALERT_JOINROOM))
         .show()

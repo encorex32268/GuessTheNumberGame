@@ -36,9 +36,7 @@ class MainActivity : AppCompatActivity() {
             bottomNav.apply {
                 setupWithNavController(navHostFragment!!.findNavController())
                 navHostFragment.findNavController().addOnDestinationChangedListener { controller, destination, arguments ->
-                    log("Main ${destination.displayName}")
-                    log("Main ${destination.navigatorName}")
-                    log("Main ${controller}")
+                    log("MainActivity displayName ${destination.displayName}")
                     when(destination.id){
                         R.id.homeFragment,R.id.memberFragment->{
                             bottomNav.visibility = View.VISIBLE

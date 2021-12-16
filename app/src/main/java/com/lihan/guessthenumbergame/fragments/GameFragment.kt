@@ -7,28 +7,28 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.ValueEventListener
 import com.lihan.guessthenumbergame.*
 import com.lihan.guessthenumbergame.databinding.FragmentGameBinding
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
-import com.lihan.guessthenumbergame.model.Status
+import com.lihan.guessthenumbergame.status.Status
 import com.lihan.guessthenumbergame.repositories.FireBaseRepository
 import com.lihan.guessthenumbergame.viewmodel.GameViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import java.lang.NumberFormatException
 import javax.inject.Inject
 import androidx.activity.OnBackPressedCallback
-import androidx.lifecycle.whenCreated
-import com.lihan.guessthenumbergame.other.ChoiceNumberAlertListener
-import com.lihan.guessthenumbergame.other.Resources
+import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import com.lihan.guessthenumbergame.repositories.AlertRoomFactory
 import com.lihan.guessthenumbergame.repositories.InputNumberCheckerUtils
+import com.lihan.guessthenumbergame.status.HomeUIStatus
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 
 
 @AndroidEntryPoint
@@ -63,113 +63,12 @@ class GameFragment : Fragment(R.layout.fragment_game) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val callback: OnBackPressedCallback =
-            object : OnBackPressedCallback(true) {
-                override fun handleOnBackPressed() {
-                    // Handle the back button event
-                    exitEvent()
-                }
-                fun exitEvent(){
-                    if(isCreator){
-                        mRoomStatus.status = Status.CreatorExitGame.name
-                    }else{
-                        if(mRoomStatus.status == Status.EndGame.name){
-                            mRoomStatus.status = Status.CreatorExitGame.name
-                        }else{
-                            mRoomStatus.status = Status.JoinerExitGame.name
-                        }
-                    }
-                    viewModel.setRoomStatus(mRoomStatus)
-                }
-
-            }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, callback)
-
+        setUpOnBackPressedCallBack()
+        getArgumentsValue()
+        setUpViewModel()
+        viewModel.getGameRoom(mGameRoom.roomFullId)
+        viewModel.getRoomStatus(mGameRoom.roomFullId)
         binding.apply {
-            args.gameRoom.apply {
-                isCreator = checkIsCreator(this.joiner)
-                mGameRoom = this
-            }
-            viewModel.getGameRoom(mGameRoom.roomFullId).observe(viewLifecycleOwner,{ fbGameRoom ->
-                mGameRoom = fbGameRoom.also {
-                    roomIDtextView.text = it.id.toString()
-                }
-                otherSideAnswer = if (isCreator){
-                    fbGameRoom.joinerAnswer
-                }else{
-                    fbGameRoom.creatorAnswer
-                }
-            })
-            viewModel.getRemoveGameRoomAndStatus().observe(viewLifecycleOwner,{
-                when(it){
-                    is Resources.Success ->{
-                        viewModel.setRoomStatus(mRoomStatus.apply {
-                            status = Status.RoomCreated.name
-                        })
-                        findNavController().popBackStack()
-                    }
-                    is Resources.Fail->{ }
-                    is Resources.Loading->{ }
-                }
-            })
-
-            viewModel.getRemoveJoinerInGameRoom().observe(viewLifecycleOwner,{
-                when(it){
-                    is Resources.Success ->{
-                        viewModel.setRoomStatus(mRoomStatus.apply {
-                            status = Status.RoomCreated.name
-                        })
-                        findNavController().popBackStack()
-                    }
-                    is Resources.Fail->{ }
-                    is Resources.Loading->{ }
-                }
-            })
-
-            viewModel.getRoomStatus(mGameRoom.roomFullId).observe(viewLifecycleOwner,{ fbRoomStatus ->
-                mRoomStatus = fbRoomStatus
-                log("onViewCreated ${mRoomStatus.toString()}")
-
-                roomIDtextView.text = ""
-                val idText = roomIDtextView.text.toString()
-                roomIDtextView.text = idText + "\n" + mRoomStatus.status
-                when(isCreator){
-                    true ->{
-                        when(fbRoomStatus.status){
-                            Status.RoomCreated.name ->{
-                                upDateStatusTextView(Status.RoomCreated.name)
-                                toResetRoomStatus()
-                            }
-                            Status.StartGame.name ->{ upDateStatusTextView(Status.StartGame.name) }
-                            Status.CreatorEndGame.name ->{ upDateStatusTextView("EndGame Wait Joiner") }
-                            Status.JoinerEndGame.name ->{ upDateStatusTextView("Partner is EndGame") }
-                            Status.EndGame.name ->{ upDateStatusTextView("Partner Used : ${fbRoomStatus.joinersGuess} Times") }
-                            Status.CreatorExitGame.name->{
-                                viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)
-                            }
-                            Status.JoinerExitGame.name->{
-                                upDateStatusTextView(Status.RoomCreated.name)
-                                viewModel.removeJoinerInGameRoom(mGameRoom)
-                            }
-
-                        }
-                    }
-                    false->{
-                        when(fbRoomStatus.status){
-                            Status.RoomCreated.name -> { }
-                            Status.StartGame.name ->{ upDateStatusTextView(Status.StartGame.name) }
-                            Status.CreatorEndGame.name ->{ upDateStatusTextView("Partner is EndGame")}
-                            Status.JoinerEndGame.name ->{ upDateStatusTextView("EndGame Wait Creator")}
-                            Status.EndGame.name ->{upDateStatusTextView("Partner Used : ${fbRoomStatus.creatorGuess} Times") }
-                            Status.JoinerExitGame.name->{ findNavController().popBackStack() }
-                            Status.CreatorExitGame.name->{
-                                viewModel.removeGameRoomAndStatus(mGameRoom.roomFullId)
-                            }
-                        }
-                    }
-                }
-
-            })
             includechoicenumberview.apply {
                 bindingViewInit()
                 val numbersTextViewID = getNumbersTextViewID()
@@ -207,24 +106,209 @@ class GameFragment : Fragment(R.layout.fragment_game) {
 
     }
 
-    private fun toResetRoomStatus() {
-        binding.apply {
-            if(mGameRoom.joinerAnswer.isEmpty() && mRoomStatus.joinersGuess > 0){
-                gameOutput.text = ""
-                alertRoomFactory.getChoiceNumberAlertView(this,object : ChoiceNumberAlertListener{
-                    override fun okClick(numberString: String) {
-                        viewModel.setGameRoom(mGameRoom.apply {
-                            creatorAnswer = numberString
-                        })
-                        viewModel.setRoomStatus(mRoomStatus.apply {
-                            joinersGuess = 0
+    private fun setUpViewModel() {
+        lifecycleScope.launch {
+            viewModel.gameRoom.collect {
+                when(it){
+                    is GameViewModel.GameUIStatus.Loading->{}
+                    is GameViewModel.GameUIStatus.Success<*>->{
+                        mGameRoom = it.data  as GameRoom
+                        binding.roomIDtextView.text = mGameRoom.id.toString()
+                        otherSideAnswer = if (isCreator){
+                            mGameRoom.joinerAnswer
+                        }else{
+                            mGameRoom.creatorAnswer
+                        }
+                    }
+                    is GameViewModel.GameUIStatus.Error->{
 
+                    }
+                    else -> Unit
+                }
+
+            }
+        }
+        lifecycleScope.launch  {
+            viewModel.roomStatus.collect {
+                log("GameFragment $it")
+                when(it){
+                    is GameViewModel.GameUIStatus.Loading->{}
+                    is GameViewModel.GameUIStatus.Success<*>->{
+                        mRoomStatus = it.data as RoomStatus
+                        handleRoomStatus(mRoomStatus)
+                    }
+                    is GameViewModel.GameUIStatus.Error->{
+
+                    }
+                    else -> Unit
+                }
+            }
+        }
+        lifecycleScope.launch {
+            viewModel.removeGameRoom.collect {
+                when(it){
+                    is GameViewModel.GameRemoveUIStatus.Loading->{ }
+                    is GameViewModel.GameRemoveUIStatus.Empty->{ }
+                    is GameViewModel.GameRemoveUIStatus.Success->{
+                        findNavController().popBackStack()
+                    }
+                    is GameViewModel.GameRemoveUIStatus.Error->{ }
+
+                }
+            }
+        }
+        lifecycleScope.launchWhenStarted {
+            viewModel.removeJoinerFromGameRoomStatus.collect {
+                when(it){
+                    is GameViewModel.UploadUIStatus.Loading->{}
+                    is GameViewModel.UploadUIStatus.Empty->{}
+                    is GameViewModel.UploadUIStatus.Success->{
+                        viewModel.setRoomStatus(mRoomStatus.apply {
+                            status = Status.RoomCreated.name
+                        })
+                        viewModel.setGameRoom(mGameRoom.apply{
+                            joinerAnswer = ""
+                            joiner = ""
                         })
                     }
-                }).show()
+                    is GameViewModel.UploadUIStatus.Error->{}
+                }
             }
-
         }
+
+        lifecycleScope.launch {
+            viewModel.createRoomsUIStatus.collect {
+                when(it){
+                    is HomeUIStatus.Loading->{
+                        binding.gameProgressBar.isVisible = true
+                    }
+                    is HomeUIStatus.Success->{
+                        binding.gameProgressBar.isVisible = false
+                        viewModel.setRoomStatus(mRoomStatus.apply {
+                            status = Status.RoomCreated.name
+                        })
+                    }
+                    is HomeUIStatus.Error->{
+                        binding.gameProgressBar.isVisible = false
+                        Toast.makeText(requireContext(),it.message, Toast.LENGTH_LONG).show()
+                    }
+                    else -> Unit
+                }
+            }
+        }
+
+        lifecycleScope.launchWhenStarted {
+            viewModel.joinerIntoTheRoom.collect {
+                when (it) {
+                    is HomeUIStatus.Loading -> {
+                        binding.gameProgressBar.isVisible = true
+                    }
+                    is HomeUIStatus.Success -> {
+                        binding.gameProgressBar.isVisible = false
+                        viewModel.setRoomStatus(mRoomStatus.apply {
+                            status = Status.StartGame.name
+                        })
+                    }
+                    is HomeUIStatus.Error -> {
+                        binding.gameProgressBar.isVisible = false
+                        Toast.makeText(requireContext(), it.message, Toast.LENGTH_LONG).show()
+                    }
+                    else -> Unit
+                }
+            }
+        }
+
+
+
+
+    }
+
+    private fun handleRoomStatus(roomStatus: RoomStatus) {
+        if (isCreator){
+            when(roomStatus.status){
+                Status.RoomCreated.name->{
+                    upDateStatusTextView(Status.RoomCreated.name)
+                }
+                Status.StartGame.name->{
+                    upDateStatusTextView(Status.StartGame.name)
+                }
+                Status.CreatorEndGame.name->{
+                    upDateStatusTextView("EndGame Wait Joiner")
+                }
+                Status.JoinerEndGame.name->{
+                    upDateStatusTextView("Partner is EndGame")
+                }
+                Status.EndGame.name->{
+                    upDateStatusTextView("Partner Used : ${roomStatus.joinersGuess} Times")
+                }
+                Status.CreatorExitGame.name->{
+                    viewModel.removeGameRoomAndRoomStatus(roomStatus.roomFullID)
+                }
+                Status.JoinerExitGame.name->{
+                    upDateStatusTextView(Status.RoomCreated.name)
+                    viewModel.removeJoinerFromGameRoom(mGameRoom)
+                }
+            }
+        }else{
+            when(roomStatus.status){
+                Status.RoomCreated.name->{ }
+                Status.StartGame.name->{
+                    upDateStatusTextView(Status.StartGame.name)
+                }
+                Status.CreatorEndGame.name->{
+                    upDateStatusTextView("Partner is EndGame")
+                }
+                Status.JoinerEndGame.name->{
+                    upDateStatusTextView("EndGame Wait Creator")
+                }
+                Status.EndGame.name->{
+                    upDateStatusTextView("Partner Used : ${roomStatus.creatorGuess} Times")
+                }
+                Status.CreatorExitGame.name->{
+                    findNavController().popBackStack()
+                }
+                Status.JoinerExitGame.name->{
+                    findNavController().popBackStack()
+                }
+            }
+        }
+
+    }
+
+    private fun getArgumentsValue() {
+        args.gameRoom.apply {
+            isCreator = checkIsCreator(this.joiner)
+            mGameRoom = this
+        }
+        if (isCreator){
+            viewModel.createGameRoom(mGameRoom)
+        }else{
+            viewModel.joinerIntoTheRoom(mGameRoom)
+        }
+    }
+
+    private fun setUpOnBackPressedCallBack() {
+        val callback: OnBackPressedCallback =
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    // Handle the back button event
+                    exitEvent()
+                }
+                fun exitEvent() {
+                    if (isCreator) {
+                        mRoomStatus.status = Status.CreatorExitGame.name
+                    } else {
+                        if (mRoomStatus.status == Status.EndGame.name) {
+                            mRoomStatus.status = Status.CreatorExitGame.name
+                        } else {
+                            mRoomStatus.status = Status.JoinerExitGame.name
+                        }
+                    }
+                    viewModel.setRoomStatus(mRoomStatus)
+                }
+
+            }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, callback)
     }
 
     private fun upDateStatusTextView(displayText: String) {
