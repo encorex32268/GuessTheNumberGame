@@ -22,21 +22,14 @@ import com.lihan.guessthenumbergame.repositories.AlertRoomFactory
 import com.lihan.guessthenumbergame.status.HomeUIStatus
 import com.lihan.guessthenumbergame.ui.HomeAdapter
 import com.lihan.guessthenumbergame.viewmodel.HomeViewModel
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collect
 import java.util.*
-import javax.inject.Inject
 
-
-
-@AndroidEntryPoint
 class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
     private val TAG = HomeFragment::class.java.simpleName
     private lateinit var binding : FragmentHomeBinding
     private lateinit var homeAdapter : HomeAdapter
     private val viewModel : HomeViewModel by viewModels()
-    @Inject
-    lateinit var fireBaseRepository: FireBaseRepository
     lateinit var alertRoomFactory : AlertRoomFactory
 
     private lateinit var gameRoom: GameRoom
@@ -70,7 +63,6 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
                 adapter = homeAdapter
             }
             homeCreateGameRoomBtn.setOnClickListener {
-                it?.apply { isEnabled = false; postDelayed({ isEnabled = true }, 400) } //400 ms
                 alertRoomFactory.getCreateRoomAlertView(binding,object : CreateRoomAlertListener{
                     override fun send(numberString: String) {
                         if (!InputNumberCheckerUtils.isCurrentNumber(numberString)) return
@@ -109,7 +101,7 @@ class HomeFragment : Fragment(R.layout.fragment_home), RoomClickListener{
 
 
     private fun creatorIntoTheRoom(creatorNumberString: String): GameRoom {
-        val myRef = fireBaseRepository.getGameRoomsRef().push()
+        val myRef = FireBaseRepository(requireContext()).getGameRoomsRef().push()
         val timeString = Date().time.toString()
         val id = timeString.substring(timeString.length - 4).toInt()
         val roomFullid = myRef.key!!

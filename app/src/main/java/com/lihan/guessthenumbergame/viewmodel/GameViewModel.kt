@@ -7,32 +7,15 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
-import com.lihan.guessthenumbergame.status.Status
 import com.lihan.guessthenumbergame.repositories.FireBaseRepository
-import com.lihan.guessthenumbergame.status.HomeUIStatus
+import com.lihan.guessthenumbergame.status.*
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class GameViewModel(application: Application) : AndroidViewModel(application){
 
     private val firebase = FireBaseRepository(application)
-    sealed class GameUIStatus{
-        data class Success<T>(val data : T) : GameUIStatus()
-        data class Error(val message : String ) : GameUIStatus()
-        object Loading : GameUIStatus()
-        object Empty : GameUIStatus()
-    }
-    sealed class GameRemoveUIStatus{
-        object Success : GameRemoveUIStatus()
-        data class Error(val message : String ) : GameRemoveUIStatus()
-        object Loading : GameRemoveUIStatus()
-        object Empty : GameRemoveUIStatus()
-    }
-    sealed class UploadUIStatus{
-        object Success : UploadUIStatus()
-        data class Error(val message : String ) : UploadUIStatus()
-        object Loading : UploadUIStatus()
-        object Empty : UploadUIStatus()
-    }
+
+
     private val _gameRoom = MutableStateFlow<GameUIStatus>(GameUIStatus.Empty)
     var gameRoom = _gameRoom
 

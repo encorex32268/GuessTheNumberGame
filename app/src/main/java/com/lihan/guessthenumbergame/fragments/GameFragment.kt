@@ -15,23 +15,18 @@ import com.lihan.guessthenumbergame.*
 import com.lihan.guessthenumbergame.databinding.FragmentGameBinding
 import com.lihan.guessthenumbergame.model.GameRoom
 import com.lihan.guessthenumbergame.model.RoomStatus
-import com.lihan.guessthenumbergame.status.Status
-import com.lihan.guessthenumbergame.repositories.FireBaseRepository
 import com.lihan.guessthenumbergame.viewmodel.GameViewModel
-import dagger.hilt.android.AndroidEntryPoint
 import java.lang.NumberFormatException
-import javax.inject.Inject
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.lihan.guessthenumbergame.repositories.AlertRoomFactory
 import com.lihan.guessthenumbergame.repositories.InputNumberCheckerUtils
-import com.lihan.guessthenumbergame.status.HomeUIStatus
+import com.lihan.guessthenumbergame.status.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 
-@AndroidEntryPoint
 class GameFragment : Fragment(R.layout.fragment_game) {
 
     private lateinit var binding : FragmentGameBinding
@@ -44,10 +39,6 @@ class GameFragment : Fragment(R.layout.fragment_game) {
     private var otherSideAnswer = ""
     private var guessCounter = 0
     private var isCreator = false
-
-    @Inject
-    lateinit var fireBaseRepository: FireBaseRepository
-
     private lateinit var alertRoomFactory: AlertRoomFactory
 
     override fun onCreateView(
@@ -110,8 +101,8 @@ class GameFragment : Fragment(R.layout.fragment_game) {
         lifecycleScope.launch {
             viewModel.gameRoom.collect {
                 when(it){
-                    is GameViewModel.GameUIStatus.Loading->{}
-                    is GameViewModel.GameUIStatus.Success<*>->{
+                    is GameUIStatus.Loading->{}
+                    is GameUIStatus.Success<*>->{
                         mGameRoom = it.data  as GameRoom
                         binding.roomIDtextView.text = mGameRoom.id.toString()
                         otherSideAnswer = if (isCreator){
@@ -120,7 +111,7 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             mGameRoom.creatorAnswer
                         }
                     }
-                    is GameViewModel.GameUIStatus.Error->{
+                    is GameUIStatus.Error->{
 
                     }
                     else -> Unit
@@ -130,14 +121,13 @@ class GameFragment : Fragment(R.layout.fragment_game) {
         }
         lifecycleScope.launch  {
             viewModel.roomStatus.collect {
-                log("GameFragment $it")
                 when(it){
-                    is GameViewModel.GameUIStatus.Loading->{}
-                    is GameViewModel.GameUIStatus.Success<*>->{
+                    is GameUIStatus.Loading->{}
+                    is GameUIStatus.Success<*>->{
                         mRoomStatus = it.data as RoomStatus
                         handleRoomStatus(mRoomStatus)
                     }
-                    is GameViewModel.GameUIStatus.Error->{
+                    is GameUIStatus.Error->{
 
                     }
                     else -> Unit
@@ -147,12 +137,12 @@ class GameFragment : Fragment(R.layout.fragment_game) {
         lifecycleScope.launch {
             viewModel.removeGameRoom.collect {
                 when(it){
-                    is GameViewModel.GameRemoveUIStatus.Loading->{ }
-                    is GameViewModel.GameRemoveUIStatus.Empty->{ }
-                    is GameViewModel.GameRemoveUIStatus.Success->{
+                    is GameRemoveUIStatus.Loading->{ }
+                    is GameRemoveUIStatus.Empty->{ }
+                    is GameRemoveUIStatus.Success->{
                         findNavController().popBackStack()
                     }
-                    is GameViewModel.GameRemoveUIStatus.Error->{ }
+                    is GameRemoveUIStatus.Error->{ }
 
                 }
             }
@@ -160,9 +150,9 @@ class GameFragment : Fragment(R.layout.fragment_game) {
         lifecycleScope.launchWhenStarted {
             viewModel.removeJoinerFromGameRoomStatus.collect {
                 when(it){
-                    is GameViewModel.UploadUIStatus.Loading->{}
-                    is GameViewModel.UploadUIStatus.Empty->{}
-                    is GameViewModel.UploadUIStatus.Success->{
+                    is UploadUIStatus.Loading->{}
+                    is UploadUIStatus.Empty->{}
+                    is UploadUIStatus.Success->{
                         viewModel.setRoomStatus(mRoomStatus.apply {
                             status = Status.RoomCreated.name
                         })
@@ -171,7 +161,7 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                             joiner = ""
                         })
                     }
-                    is GameViewModel.UploadUIStatus.Error->{}
+                    is UploadUIStatus.Error->{}
                 }
             }
         }

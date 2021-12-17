@@ -8,27 +8,16 @@ import com.lihan.guessthenumbergame.R
 class FireBaseRepository(
     val context : Context
 ) {
-
+    var firebase : FirebaseDatabase = FirebaseDatabase.getInstance()
 
     fun getGameRoomsRef() : DatabaseReference{
-        return FirebaseDatabase.getInstance().getReference(context.getString(R.string.FIREBASE_GAMEROOMS_PATH))
-    }
-
-    fun getGameRoomsStatusRef() : DatabaseReference{
-        return FirebaseDatabase.getInstance().getReference(context.getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH))
-
+        return firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMS_PATH))
     }
     fun getGameRoomsChildRef(roomFullId : String) : DatabaseReference{
-        return FirebaseDatabase.getInstance().getReference(context.getString(R.string.FIREBASE_GAMEROOMS_PATH)).child(roomFullId)
+        return firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMS_PATH)).child(roomFullId)
     }
     fun getGameRoomsStatusChildRef(roomFullId : String) : DatabaseReference{
-        return FirebaseDatabase.getInstance().getReference(context.getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(roomFullId)
+        return firebase.getReference(context.getString(R.string.FIREBASE_GAMEROOMSTATUS_PATH)).child(roomFullId)
 
     }
-
-    fun removeAllRooms() {
-        FirebaseDatabase.getInstance().getReference("GameRooms").removeValue()
-        FirebaseDatabase.getInstance().getReference("GameRoomStatus").removeValue()
-    }
-
 }

@@ -10,19 +10,12 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.setupWithNavController
 import com.lihan.guessthenumbergame.R
 import com.lihan.guessthenumbergame.databinding.ActivityMainBinding
-import com.lihan.guessthenumbergame.log
-import com.lihan.guessthenumbergame.repositories.FireBaseRepository
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
 
-@AndroidEntryPoint
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding : ActivityMainBinding
-    @Inject
-    lateinit var firebaseRepository: FireBaseRepository
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,7 +29,6 @@ class MainActivity : AppCompatActivity() {
             bottomNav.apply {
                 setupWithNavController(navHostFragment!!.findNavController())
                 navHostFragment.findNavController().addOnDestinationChangedListener { controller, destination, arguments ->
-                    log("MainActivity displayName ${destination.displayName}")
                     when(destination.id){
                         R.id.homeFragment,R.id.memberFragment->{
                             bottomNav.visibility = View.VISIBLE
