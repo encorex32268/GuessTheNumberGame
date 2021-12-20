@@ -27,7 +27,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 
-class GameFragment : Fragment(R.layout.fragment_game) {
+class GameFragment : Fragment(R.layout.fragment_game),GameRoomStatusListener {
 
     private lateinit var binding : FragmentGameBinding
     private val args : GameFragmentArgs by navArgs()
@@ -98,118 +98,14 @@ class GameFragment : Fragment(R.layout.fragment_game) {
     }
 
     private fun setUpViewModel() {
-        lifecycleScope.launch {
-            viewModel.gameRoom.collect {
-                when(it){
-                    is GameUIStatus.Loading->{}
-                    is GameUIStatus.Success<*>->{
-                        mGameRoom = it.data  as GameRoom
-                        binding.roomIDtextView.text = mGameRoom.id.toString()
-                        otherSideAnswer = if (isCreator){
-                            mGameRoom.joinerAnswer
-                        }else{
-                            mGameRoom.creatorAnswer
-                        }
-                    }
-                    is GameUIStatus.Error->{
-
-                    }
-                    else -> Unit
-                }
-
-            }
+        lifecycleScope.apply {
+            launchWhenStarted { wCreateRoom() }
+            launchWhenStarted { wJoinerIntoRoom() }
+            launchWhenStarted { wGameRoom() }
+            launchWhenStarted  { wRoomStatus() }
+            launchWhenStarted { wRemoveGameRoom() }
+            launchWhenStarted { wRemoveJoiner() }
         }
-        lifecycleScope.launch  {
-            viewModel.roomStatus.collect {
-                when(it){
-                    is GameUIStatus.Loading->{}
-                    is GameUIStatus.Success<*>->{
-                        mRoomStatus = it.data as RoomStatus
-                        handleRoomStatus(mRoomStatus)
-                    }
-                    is GameUIStatus.Error->{
-
-                    }
-                    else -> Unit
-                }
-            }
-        }
-        lifecycleScope.launch {
-            viewModel.removeGameRoom.collect {
-                when(it){
-                    is GameRemoveUIStatus.Loading->{ }
-                    is GameRemoveUIStatus.Empty->{ }
-                    is GameRemoveUIStatus.Success->{
-                        findNavController().popBackStack()
-                    }
-                    is GameRemoveUIStatus.Error->{ }
-
-                }
-            }
-        }
-        lifecycleScope.launchWhenStarted {
-            viewModel.removeJoinerFromGameRoomStatus.collect {
-                when(it){
-                    is UploadUIStatus.Loading->{}
-                    is UploadUIStatus.Empty->{}
-                    is UploadUIStatus.Success->{
-                        viewModel.setRoomStatus(mRoomStatus.apply {
-                            status = Status.RoomCreated.name
-                        })
-                        viewModel.setGameRoom(mGameRoom.apply{
-                            joinerAnswer = ""
-                            joiner = ""
-                        })
-                    }
-                    is UploadUIStatus.Error->{}
-                }
-            }
-        }
-
-        lifecycleScope.launch {
-            viewModel.createRoomsUIStatus.collect {
-                when(it){
-                    is HomeUIStatus.Loading->{
-                        binding.gameProgressBar.isVisible = true
-                    }
-                    is HomeUIStatus.Success->{
-                        binding.gameProgressBar.isVisible = false
-                        viewModel.setRoomStatus(mRoomStatus.apply {
-                            status = Status.RoomCreated.name
-                        })
-                    }
-                    is HomeUIStatus.Error->{
-                        binding.gameProgressBar.isVisible = false
-                        Toast.makeText(requireContext(),it.message, Toast.LENGTH_LONG).show()
-                    }
-                    else -> Unit
-                }
-            }
-        }
-
-        lifecycleScope.launchWhenStarted {
-            viewModel.joinerIntoTheRoom.collect {
-                when (it) {
-                    is HomeUIStatus.Loading -> {
-                        binding.gameProgressBar.isVisible = true
-                    }
-                    is HomeUIStatus.Success -> {
-                        binding.gameProgressBar.isVisible = false
-                        viewModel.setRoomStatus(mRoomStatus.apply {
-                            status = Status.StartGame.name
-                        })
-                    }
-                    is HomeUIStatus.Error -> {
-                        binding.gameProgressBar.isVisible = false
-                        Toast.makeText(requireContext(), it.message, Toast.LENGTH_LONG).show()
-                    }
-                    else -> Unit
-                }
-            }
-        }
-
-
-
 
     }
 
@@ -223,13 +119,13 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                     upDateStatusTextView(Status.StartGame.name)
                 }
                 Status.CreatorEndGame.name->{
-                    upDateStatusTextView("EndGame Wait Joiner")
+                    upDateStatusTextView(getString(R.string.status_creator_end_game))
                 }
                 Status.JoinerEndGame.name->{
-                    upDateStatusTextView("Partner is EndGame")
+                    upDateStatusTextView(getString(R.string.status_partner_is_end_game))
                 }
                 Status.EndGame.name->{
-                    upDateStatusTextView("Partner Used : ${roomStatus.joinersGuess} Times")
+                    upDateStatusTextView(getString(R.string.status_partner_used,roomStatus.joinersGuess))
                 }
                 Status.CreatorExitGame.name->{
                     viewModel.removeGameRoomAndRoomStatus(roomStatus.roomFullID)
@@ -246,13 +142,13 @@ class GameFragment : Fragment(R.layout.fragment_game) {
                     upDateStatusTextView(Status.StartGame.name)
                 }
                 Status.CreatorEndGame.name->{
-                    upDateStatusTextView("Partner is EndGame")
+                    upDateStatusTextView(getString(R.string.status_partner_is_end_game))
                 }
                 Status.JoinerEndGame.name->{
-                    upDateStatusTextView("EndGame Wait Creator")
+                    upDateStatusTextView(getString(R.string.status_joiner_end_game))
                 }
                 Status.EndGame.name->{
-                    upDateStatusTextView("Partner Used : ${roomStatus.creatorGuess} Times")
+                    upDateStatusTextView(getString(R.string.status_partner_used,roomStatus.creatorGuess))
                 }
                 Status.CreatorExitGame.name->{
                     findNavController().popBackStack()
@@ -373,9 +269,118 @@ class GameFragment : Fragment(R.layout.fragment_game) {
         return joiner.isEmpty()||joiner.isBlank()
     }
 
+    override suspend fun wCreateRoom() {
+        viewModel.createRoomsUIStatus.collect {
+            when(it){
+                is HomeUIStatus.Loading->{
+                    binding.gameProgressBar.isVisible = true
+                }
+                is HomeUIStatus.Success->{
+                    binding.gameProgressBar.isVisible = false
+                    viewModel.setRoomStatus(mRoomStatus.apply {
+                        status = Status.RoomCreated.name
+                    })
+                }
+                is HomeUIStatus.Error->{
+                    binding.gameProgressBar.isVisible = false
+                    Toast.makeText(requireContext(),it.message, Toast.LENGTH_LONG).show()
+                }
+                else -> Unit
+            }
+        }
+    }
 
+    override suspend fun wGameRoom() {
+        viewModel.gameRoom.collect {
+            when(it){
+                is GameUIStatus.Loading->{}
+                is GameUIStatus.Success<*>->{
+                    mGameRoom = it.data  as GameRoom
+                    binding.roomIDtextView.text = mGameRoom.id.toString()
+                    otherSideAnswer = if (isCreator){
+                        mGameRoom.joinerAnswer
+                    }else{
+                        mGameRoom.creatorAnswer
+                    }
+                }
+                is GameUIStatus.Error->{
 
+                }
+                else -> Unit
+            }
 
+        }
+    }
+
+    override suspend fun wRoomStatus() {
+        viewModel.roomStatus.collect {
+            when(it){
+                is GameUIStatus.Loading->{}
+                is GameUIStatus.Success<*>->{
+                    mRoomStatus = it.data as RoomStatus
+                    handleRoomStatus(mRoomStatus)
+                }
+                is GameUIStatus.Error->{
+
+                }
+                else -> Unit
+            }
+        }
+    }
+
+    override suspend fun wRemoveGameRoom() {
+        viewModel.removeGameRoom.collect {
+            when(it){
+                is GameRemoveUIStatus.Loading->{ }
+                is GameRemoveUIStatus.Empty->{ }
+                is GameRemoveUIStatus.Success->{
+                    findNavController().popBackStack()
+                }
+                is GameRemoveUIStatus.Error->{ }
+
+            }
+        }
+    }
+
+    override suspend fun wRemoveJoiner() {
+        viewModel.removeJoinerFromGameRoomStatus.collect {
+            when(it){
+                is UploadUIStatus.Loading->{}
+                is UploadUIStatus.Empty->{}
+                is UploadUIStatus.Success->{
+                    viewModel.setRoomStatus(mRoomStatus.apply {
+                        status = Status.RoomCreated.name
+                    })
+                    viewModel.setGameRoom(mGameRoom.apply{
+                        joinerAnswer = ""
+                        joiner = ""
+                    })
+                }
+                is UploadUIStatus.Error->{}
+            }
+        }
+    }
+
+    override suspend fun wJoinerIntoRoom() {
+        viewModel.joinerIntoTheRoom.collect {
+            when (it) {
+                is HomeUIStatus.Loading -> {
+                    binding.gameProgressBar.isVisible = true
+                }
+                is HomeUIStatus.Success -> {
+                    binding.gameProgressBar.isVisible = false
+                    viewModel.setRoomStatus(mRoomStatus.apply {
+                        status = Status.StartGame.name
+                    })
+                }
+                is HomeUIStatus.Error -> {
+                    binding.gameProgressBar.isVisible = false
+                    Toast.makeText(requireContext(), it.message, Toast.LENGTH_LONG).show()
+                }
+                else -> Unit
+            }
+        }
+    }
 
 
 }

@@ -7,4 +7,8 @@
     <string name="FIREBASE_GAMEROOMS_PATH">GameRooms</string>
     <string name="FIREBASE_GAMEROOMSTATUS_PATH">GameRoomStatus</string>
     <string name="ALERT_CRAETEROOM">Create Room</string>
+    <string name="status_creator_end_game">EndGame Wait Joiner</string>
+    <string name="status_partner_is_end_game">Partner is EndGame</string>
+    <string name="status_joiner_end_game">EndGame Wait Creator</string>
+    <string name="status_partner_used">Partner Used : %1$d Times</string>
 </resources>
