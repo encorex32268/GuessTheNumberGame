@@ -24,24 +24,6 @@ class MainActivity : AppCompatActivity() {
 
         AppCompatDelegate.setDefaultNightMode(MODE_NIGHT_NO)
 
-        binding.apply {
-            val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainerView) as NavHostFragment?
-            bottomNav.apply {
-                setupWithNavController(navHostFragment!!.findNavController())
-                navHostFragment.findNavController().addOnDestinationChangedListener { controller, destination, arguments ->
-                    when(destination.id){
-                        R.id.homeFragment,R.id.memberFragment->{
-                            bottomNav.visibility = View.VISIBLE
-                        }
-                        else ->{
-                            bottomNav.visibility = View.INVISIBLE
-                        }
-                    }
-
-                }
-
-            }
-        }
     }
 
 

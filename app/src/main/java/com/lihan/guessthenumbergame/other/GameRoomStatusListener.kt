@@ -1,4 +1,4 @@
-package com.lihan.guessthenumbergame
+package com.lihan.guessthenumbergame.other
 
 interface GameRoomStatusListener {
 

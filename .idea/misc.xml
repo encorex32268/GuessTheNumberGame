@@ -3,8 +3,15 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/cheng/StudioProjects/GuessTheNumberGame/app/src/main/res/drawable/room_connect_status.xml" value="0.2520833333333333" />
+        <entry key="..\:/Users/cheng/StudioProjects/GuessTheNumberGame/app/src/main/res/drawable/room_coonect_status_green.xml" value="0.2520833333333333" />
+        <entry key="..\:/Users/cheng/StudioProjects/GuessTheNumberGame/app/src/main/res/layout/activity_main.xml" value="0.2359375" />
+        <entry key="..\:/Users/cheng/StudioProjects/GuessTheNumberGame/app/src/main/res/layout/choicenumber_view.xml" value="0.33" />
+        <entry key="..\:/Users/cheng/StudioProjects/GuessTheNumberGame/app/src/main/res/layout/createroom_alertview.xml" value="0.33" />
         <entry key="..\:/Users/cheng/StudioProjects/GuessTheNumberGame/app/src/main/res/layout/fragment_game.xml" value="0.3026041666666667" />
         <entry key="..\:/Users/cheng/StudioProjects/GuessTheNumberGame/app/src/main/res/layout/fragment_member.xml" value="0.2046875" />
+        <entry key="..\:/Users/cheng/StudioProjects/GuessTheNumberGame/app/src/main/res/layout/home_gameroom_item.xml" value="0.75" />
+        <entry key="..\:/Users/cheng/StudioProjects/GuessTheNumberGame/app/src/main/res/layout/room_connect_status.xml" value="0.2359375" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.33605072463768115" />
         <entry key="app/src/main/res/layout/activity_main2.xml" value="0.22708333333333333" />
         <entry key="app/src/main/res/layout/choicenumber_view.xml" value="0.4533662754786906" />

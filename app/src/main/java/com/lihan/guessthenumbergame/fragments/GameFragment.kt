@@ -20,14 +20,14 @@ import java.lang.NumberFormatException
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.lihan.guessthenumbergame.other.GameRoomStatusListener
 import com.lihan.guessthenumbergame.repositories.AlertRoomFactory
 import com.lihan.guessthenumbergame.repositories.InputNumberCheckerUtils
 import com.lihan.guessthenumbergame.status.*
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 
 
-class GameFragment : Fragment(R.layout.fragment_game),GameRoomStatusListener {
+class GameFragment : Fragment(R.layout.fragment_game), GameRoomStatusListener {
 
     private lateinit var binding : FragmentGameBinding
     private val args : GameFragmentArgs by navArgs()
