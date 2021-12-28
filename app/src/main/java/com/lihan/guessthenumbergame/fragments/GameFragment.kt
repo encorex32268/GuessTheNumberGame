@@ -20,11 +20,13 @@ import java.lang.NumberFormatException
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.lihan.guessthenumbergame.databinding.ChoicenumberViewBinding
 import com.lihan.guessthenumbergame.other.GameRoomStatusListener
 import com.lihan.guessthenumbergame.repositories.AlertRoomFactory
 import com.lihan.guessthenumbergame.repositories.InputNumberCheckerUtils
 import com.lihan.guessthenumbergame.status.*
 import kotlinx.coroutines.flow.collect
+import org.w3c.dom.Text
 
 
 class GameFragment : Fragment(R.layout.fragment_game), GameRoomStatusListener {
@@ -109,14 +111,30 @@ class GameFragment : Fragment(R.layout.fragment_game), GameRoomStatusListener {
 
     }
 
+    private fun disableLayout(isDisable : Boolean){
+        binding.includechoicenumberview.apply {
+            guessNumberSendButton2.isClickable = isDisable
+            val choiceNumber = arrayListOf<TextView>(
+                choiceNum1TextView,choiceNum2TextView,choiceNum3TextView,
+                choiceNum4TextView,choiceNum5TextView,choiceNum6TextView,
+                choiceNum7TextView,choiceNum8TextView,choiceNum9TextView,choiceNum10TextView
+            )
+            choiceNumber.forEach {
+                it.isClickable = isDisable
+            }
+        }
+    }
+
     private fun handleRoomStatus(roomStatus: RoomStatus) {
         if (isCreator){
             when(roomStatus.status){
                 Status.RoomCreated.name->{
                     upDateStatusTextView(Status.RoomCreated.name)
+                    disableLayout(isDisable = true)
                 }
                 Status.StartGame.name->{
                     upDateStatusTextView(Status.StartGame.name)
+                    disableLayout(isDisable = false)
                 }
                 Status.CreatorEndGame.name->{
                     upDateStatusTextView(getString(R.string.status_creator_end_game))
